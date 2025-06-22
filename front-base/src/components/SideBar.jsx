@@ -6,7 +6,10 @@ import {
   Users,
   GraduationCap,
   LogOut,
-  Menu
+  Menu,
+  UserPlus,
+  Lightbulb,
+  Star
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -17,6 +20,10 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
 
   const menuItems = [
     { name: "Inicio", path: "/home", icon: LayoutGrid },
+    { name: "Mis Preferencias", path: "/mis-preferencias", icon: Star },
+    { name: "Ver Graduados", path: "/graduados", icon: Users },
+    { name: "Registrar Graduado", path: "/graduados/registro", icon: UserPlus },
+    { name: "Áreas de Interés", path: "/areas-interes", icon: Lightbulb },
     { name: "Grupos", path: "/groups", icon: BookOpen },
     { name: "Estudiantes", path: "/students", icon: Users },
     { name: "Profesores", path: "/teachers", icon: GraduationCap },
@@ -45,9 +52,8 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
 
   return (
     <aside
-      className={`fixed md:static z-20 h-screen flex flex-col items-center justify-between ${
-        isMinimized ? "w-20" : "w-64"
-      } bg-white border-r shadow-sm p-4 transition-all duration-300`}
+      className={`fixed md:static z-20 h-screen flex flex-col items-center justify-between ${isMinimized ? "w-20" : "w-64"
+        } bg-white border-r shadow-sm p-4 transition-all duration-300`}
     >
       <div className="w-full">
         <Link to="/" className="text-2xl font-bold flex justify-center mb-6">
@@ -63,11 +69,10 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
             <button
               key={path}
               onClick={() => handleLinkClick(path)}
-              className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-blue-50 text-sm font-medium transition-all duration-200 ${
-                location.pathname.startsWith(path)
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-700"
-              }`}
+              className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-blue-50 text-sm font-medium transition-all duration-200 ${location.pathname.startsWith(path)
+                ? "bg-blue-100 text-blue-700"
+                : "text-gray-700"
+                }`}
             >
               <Icon size={20} />
               {!isMinimized && <span>{name}</span>}

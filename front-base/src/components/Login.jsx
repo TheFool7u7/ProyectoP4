@@ -22,7 +22,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/login`, {
+      const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -35,9 +35,11 @@ const Login = () => {
         setError(data.error || "Error al iniciar sesión");
         return;
       }
+      
+      // Pasamos el objeto 'perfil' completo que lo devuelve la API
+      login(data.perfil, data.token);
+      navigate("/home"); // Se redirige al inicio después del login
 
-      login(form, data.token);
-      navigate("/");
     } catch (err) {
       console.error("Error al intentar iniciar sesión:", err);
       setError("Error de conexión. Intenta nuevamente.");
@@ -67,7 +69,7 @@ const Login = () => {
           required
           className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {error && <p className="text-red-600 text-sm text-center">{error}</p>}
         <button
           type="submit"
           className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg w-full ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
