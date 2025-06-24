@@ -1,85 +1,56 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 const Login = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const API_URL = import.meta.env.VITE_API_URL;
+    const navigate = useNavigate();
+    const { signIn } = useAuth();
 
-  const [form, setForm] = useState({ id: "", password: "" });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState({ email: "", password: "" });
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            const { error } = await signIn(formData);
+            if (error) throw error;
+            navigate("/home"); // Redirige al inicio tras el login
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    try {
-      const res = await fetch(`${API_URL}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-      setLoading(false);
-
-      if (!res.ok) {
-        setError(data.error || "Error al iniciar sesión");
-        return;
-      }
-      
-      // Pasamos el objeto 'perfil' completo que lo devuelve la API
-      login(data.perfil, data.token);
-      navigate("/home"); // Se redirige al inicio después del login
-
-    } catch (err) {
-      console.error("Error al intentar iniciar sesión:", err);
-      setError("Error de conexión. Intenta nuevamente.");
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-md mx-auto mt-10">
-      <h1 className="text-2xl font-bold mb-6 text-center text-blue-700">Iniciar sesión</h1>
-      <form onSubmit={handleLogin} className="space-y-4">
-        <input
-          type="text"
-          name="id"
-          placeholder="Cédula"
-          value={form.id}
-          onChange={handleChange}
-          required
-          className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Contraseña"
-          value={form.password}
-          onChange={handleChange}
-          required
-          className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        {error && <p className="text-red-600 text-sm text-center">{error}</p>}
-        <button
-          type="submit"
-          className={`bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg w-full ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={loading}
-        >
-          {loading ? "Cargando..." : "Entrar"}
-        </button>
-      </form>
-    </div>
-  );
+    return (
+        // Contenedor para centrar el formulario en la página 
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+            <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+                <h1 className="text-3xl font-bold mb-6 text-center text-blue-700">Iniciar sesión</h1>
+                <form onSubmit={handleLogin} className="space-y-4">
+                    <input type="email" name="email" placeholder="Correo Electrónico" autoComplete="email" value={formData.email} onChange={handleChange} required className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <input type="password" name="password" placeholder="Contraseña" autoComplete="current-password" value={formData.password} onChange={handleChange} required className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    {error && <p className="text-red-600 text-sm text-center bg-red-100 p-2 rounded-lg">{error}</p>}
+                    <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg disabled:bg-gray-400 font-bold transition-transform transform hover:scale-105">
+                        {loading ? "Cargando..." : "Entrar"}
+                    </button>
+                </form>
+                <p className="text-center mt-6 text-sm text-gray-600">
+                    ¿No tienes una cuenta?{' '}
+                    <Link to="/signup" className="font-medium text-blue-600 hover:underline">
+                        Regístrate aquí
+                    </Link>
+                </p>
+            </div>
+        </div>
+    );
 };
 
 export default Login;

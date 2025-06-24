@@ -1,32 +1,59 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "../../supabaseClient";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem("perfil"))
-  );
-  const [token, setToken] = useState(() => localStorage.getItem("access_token"));
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // La función de login ahora guarda el objeto 'perfil' completo
-  const login = (perfil, jwt) => {
-    localStorage.setItem("access_token", jwt);
-    localStorage.setItem("perfil", JSON.stringify(perfil));
-    setUser(perfil);
-    setToken(jwt);
+  useEffect(() => {
+    // onAuthStateChange se encarga de todo: carga inicial, login, logout.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        // Esta función se llamará cuando el estado de auth cambie.
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('perfiles')
+            .select('id, nombre_completo, rol')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profile) {
+            const { data: graduadoData } = await supabase
+              .from('graduados')
+              .select('id')
+              .eq('perfil_id', profile.id)
+              .single();
+            setUser({ ...profile, graduado_id: graduadoData?.id });
+          } else {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Se limpia el listener cuando el componente se desmonte.
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
+
+  const value = {
+    signIn: (data) => supabase.auth.signInWithPassword(data),
+    signOut: () => supabase.auth.signOut(),
+    signUp: (data) => supabase.auth.signUp(data),
+    user,
+    isAuthenticated: !!user,
+    loading,
   };
-
-  const logout = () => {
-    localStorage.clear();
-    setUser(null);
-    setToken(null);
-  };
-
-  const isAuthenticated = !!token;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

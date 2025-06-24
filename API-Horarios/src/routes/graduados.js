@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
         return res.status(500).json({ error: 'Error al registrar el graduado', details: error.message });
     }
 
-    // Si todo sale bien, devolvemos los datos insertados
+    // Si todo sale bien, se devuelve los datos insertados
     res.status(201).json({ message: 'Graduado registrado con éxito', data: data });
 });
 

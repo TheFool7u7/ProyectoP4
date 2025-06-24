@@ -10,14 +10,15 @@ const MisPreferencias = () => {
 
     // Se usa useCallback para memorizar la función y evitar re-renders innecesarios
     const fetchPreferences = useCallback(async () => {
-        if (!user?.id) return; // Si no hay ID de usuario, no se hace nada
+        if (!user?.graduado_id) return; // Ahora se verifica el ID de graduado
 
         setLoading(true);
         try {
             // Se hace las dos llamadas a la API en paralelo para más eficiencia
             const [areasRes, prefsRes] = await Promise.all([
                 fetch(`${API_URL}/api/areas`),
-                fetch(`${API_URL}/api/preferencias/${user.id}`)
+                // Se usa el ID de graduado para obtener las preferencias correctas
+                fetch(`${API_URL}/api/preferencias/${user.graduado_id}`)
             ]);
 
             if (!areasRes.ok || !prefsRes.ok) throw new Error('Error al cargar los datos');
@@ -33,7 +34,7 @@ const MisPreferencias = () => {
         } finally {
             setLoading(false);
         }
-    }, [user?.id, API_URL]);
+    }, [user?.graduado_id, API_URL]); // Se depende del ID de graduado
 
     useEffect(() => {
         fetchPreferences();
@@ -52,9 +53,11 @@ const MisPreferencias = () => {
     };
 
     const handleSubmit = async () => {
-        if (!user?.id) return;
+        if (!user?.graduado_id) return; // Se verifica el ID de graduado
+
         try {
-            const response = await fetch(`${API_URL}/api/preferencias/${user.id}`, {
+            // Se usa el ID de graduado para guardar las preferencias
+            const response = await fetch(`${API_URL}/api/preferencias/${user.graduado_id}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ preferenceIds: Array.from(selectedAreas) })
@@ -66,7 +69,7 @@ const MisPreferencias = () => {
         }
     };
 
-    if (loading) return <p>Cargando tus preferencias...</p>;
+    if (loading) return <p className="text-center p-8">Cargando tus preferencias...</p>;
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">

@@ -10,7 +10,6 @@ const GestionAreas = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingArea, setEditingArea] = useState(null);
 
-    // Efecto para obtener las áreas 
     useEffect(() => {
         const fetchAreas = async () => {
             try {
