@@ -206,7 +206,7 @@ const GestionTalleres = () => {
                                 <div><label>Fecha de Inicio</label><input type="datetime-local" name="fecha_inicio" value={currentTaller.fecha_inicio} onChange={handleChange} className="w-full p-2 border rounded" required /></div>
                                 <div><label>Fecha de Fin</label><input type="datetime-local" name="fecha_fin" value={currentTaller.fecha_fin} onChange={handleChange} className="w-full p-2 border rounded" /></div>
                                 <div><label>Cupo Máximo</label><input type="number" name="cupo_maximo" value={currentTaller.cupo_maximo} onChange={handleChange} placeholder="0" className="w-full p-2 border rounded" /></div>
-                                <div><label>Modalidad</label><select name="modalidad" value={currentTaller.modalidad} onChange={handleChange} className="w-full p-2 border rounded"><option>Virtual</option><option>Presencial</option><option>Híbrido</option></select></div>
+                                <div><label>Modalidad</label><select name="modalidad" value={currentTaller.modalidad} onChange={handleChange} className="w-full p-2 border rounded"><option>Virtual</option><option>Presencial</option><option>Hibrido</option></select></div>
                                 <div>
                                     <label>Facilitador Asignado</label>
                                     {user.rol === 'administrador' ? (
