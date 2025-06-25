@@ -1,85 +1,109 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { Edit, Save, XCircle, UploadCloud, Download, Trash2, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Home, Book, GraduationCap, Briefcase, FileText, Download, Upload, CheckCircle, Clock } from 'lucide-react';
+import EditGraduadoModal from './EditGraduadoModal';
 
 const MiPerfil = () => {
     const { user } = useAuth();
+    const [perfil, setPerfil] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const [documentos, setDocumentos] = useState([]);
+    const [carreras, setCarreras] = useState([]);
+    const [inscripciones, setInscripciones] = useState([]);
+
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [documentType, setDocumentType] = useState('titulo_profesional');
+
     const API_URL = import.meta.env.VITE_API_URL;
 
-    // Estados para la edición del perfil
-    const [isEditing, setIsEditing] = useState(false);
-    const [profileData, setProfileData] = useState({});
-    const [originalProfileData, setOriginalProfileData] = useState({});
+    const fetchProfile = useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('perfiles')
+                .select(`*, graduado:graduados(*)`)
+                .eq('id', user.id)
+                .single();
 
-    // Estados para la gestión de documentos
-    const [documents, setDocuments] = useState([]);
-    const [selectedFile, setSelectedFile] = useState(null);
-    const [documentType, setDocumentType] = useState('curriculum'); // Tipo por defecto
-    const [uploading, setUploading] = useState(false);
-    const [downloadingDocId, setDownloadingDocId] = useState(null);
+            if (error) throw error;
 
-    // Cargar datos iniciales del perfil y documentos
+            if (data && data.graduado) {
+                setPerfil(data);
+                const graduadoId = data.graduado.id;
+
+                const [docResponse, carrerasRes, talleresRes] = await Promise.all([
+                    fetch(`${API_URL}/api/documentos/${graduadoId}`),
+                    fetch(`${API_URL}/api/graduados/${graduadoId}/carreras`),
+                    fetch(`${API_URL}/api/inscripciones/by-graduado/${graduadoId}`)
+                ]);
+
+                if (docResponse.ok) setDocumentos(await docResponse.json());
+                if (carrerasRes.ok) setCarreras(await carrerasRes.json());
+                if (talleresRes.ok) setInscripciones(await talleresRes.json());
+            }
+        } catch (error) {
+            console.error("Error cargando el perfil completo:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, [user, API_URL]);
+
     useEffect(() => {
-        if (user) {
-            const fetchGraduadoData = async () => {
-                const { data } = await supabase.from('graduados').select('*').eq('perfil_id', user.id).single();
-                setProfileData(data || {});
-                setOriginalProfileData(data || {});
-            };
+        fetchProfile();
+    }, [fetchProfile]);
 
-            const fetchDocuments = async () => {
-                const { data } = await supabase.from('documentos_graduados').select('*').eq('graduado_id', user.graduado_id);
-                setDocuments(data || []);
-            };
+    const handleDocumentView = async (filePath) => {
+        try {
+            if (!filePath) throw new Error("La ruta del archivo no está disponible.");
+            const { data, error } = await supabase.storage
+                .from('documentos-graduados')
+                .createSignedUrl(filePath, 60);
 
-            fetchGraduadoData();
-            fetchDocuments();
+            if (error) throw error;
+            window.open(data.signedUrl, '_blank');
+        } catch (error) {
+            alert("Error al generar el enlace del documento: " + error.message);
         }
-    }, [user]);
-
-    //editar el perfil
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setProfileData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleCancelEdit = () => {
-        setProfileData(originalProfileData);
-        setIsEditing(false);
-    };
-
-    const handleSaveChanges = async () => {
-        const { id, perfil_id, correo_electronico, ...updateData } = profileData;
-        const { error } = await supabase.from('graduados').update(updateData).eq('id', user.graduado_id);
-        if (error) {
-            alert("Error al guardar los cambios: " + error.message);
-        } else {
-            alert("Perfil actualizado con éxito");
-            setOriginalProfileData(profileData);
-            setIsEditing(false);
-        }
-    };
-
-    // --- subir archivos
-    const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) setSelectedFile(e.target.files[0]);
     };
 
     const handleFileUpload = async () => {
-        if (!selectedFile || !user?.id) return alert("Por favor, selecciona un archivo.");
+        if (!selectedFile) {
+            alert("Por favor, selecciona un archivo para subir.");
+            return;
+        }
         setUploading(true);
-        const filePath = `${user.id}/${Date.now()}_${selectedFile.name}`;
         try {
-            const { data: uploadData, error: uploadError } = await supabase.storage.from('documentos-graduados').upload(filePath, selectedFile);
+            const cleanFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            // Se usa el ID del usuario autenticado (user.id) como nombre de la carpeta.
+            const filePath = `${user.id}/${Date.now()}_${cleanFileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('documentos-graduados')
+                .upload(filePath, selectedFile);
+
             if (uploadError) throw uploadError;
-            const metadata = { graduado_id: user.graduado_id, tipo_documento: documentType, nombre_archivo: selectedFile.name, url_archivo_storage: uploadData.path };
-            const { data: dbData, error: dbError } = await supabase.from('documentos_graduados').insert([metadata]).select();
-            if (dbError) throw dbError;
-            setDocuments([...documents, dbData[0]]);
+
+            const response = await fetch(`${API_URL}/api/documentos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    graduado_id: perfil.graduado.id,
+                    tipo_documento: documentType,
+                    nombre_archivo: selectedFile.name,
+                    url_archivo_storage: filePath
+                }),
+            });
+
+            if (!response.ok) throw new Error('No se pudo guardar la referencia del documento.');
+
+            alert("Documento subido y registrado con éxito.");
+            fetchProfile();
             setSelectedFile(null);
-            document.getElementById('file-input-perfil').value = ''; // Limpia el input visualmente
-            alert('¡Documento subido con éxito!');
         } catch (error) {
             alert("Error al subir el archivo: " + error.message);
         } finally {
@@ -87,129 +111,66 @@ const MiPerfil = () => {
         }
     };
 
-    // descargar archivos
-    const handleDownload = async (filePath, fileName) => {
-        try {
-            // 1. se generamos la URL firmada y segura
-            const { data, error } = await supabase.storage
-                .from('documentos-graduados')
-                .createSignedUrl(filePath, 60); // Válida por 60 segundos
+    const { graduado } = perfil || {};
+    const talleresFinalizados = inscripciones.filter(t => ['asistio_completo', 'completado_certificado'].includes(t.estado));
+    const talleresEnCurso = inscripciones.filter(t => !['asistio_completo', 'completado_certificado'].includes(t.estado));
 
-            if (error) throw error;
-
-            // 2. se usa 'fetch' para obtener los datos del archivo desde la URL segura
-            const response = await fetch(data.signedUrl);
-            const blob = await response.blob(); // se convierte la respuesta en un objeto de archivo (blob)
-
-            // 3. se crea una URL local en el navegador para este objeto
-            const blobUrl = window.URL.createObjectURL(blob);
-
-            // 4. se crea un enlace <a> invisible en la memoria
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.setAttribute('download', fileName || 'download'); // se le asigna el nombre original
-
-            // 5. se añade, se simula el clic y se elimina
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            // 6. se libera la memoria del navegador revocando la URL del objeto
-            window.URL.revokeObjectURL(blobUrl);
-
-        } catch (error) {
-            alert("No se pudo descargar el archivo: " + error.message);
-            console.error("Error al descargar:", error);
-        }
-    };
-
-    //borrar documentos
-    const handleDocumentDelete = async (docId) => {
-        if (!window.confirm("¿Estás seguro de que quieres eliminar este documento?")) return;
-        try {
-            const response = await fetch(`${API_URL}/api/documentos/${docId}`, { method: 'DELETE' });
-            if (response.ok) {
-                setDocuments(documents.filter(doc => doc.id !== docId));
-                alert("Documento eliminado con éxito.");
-            } else {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Ocurrió un error.");
-            }
-        } catch (error) {
-            alert("Error al eliminar el documento: " + error.message);
-        }
-    };
-
-    if (!user) return <div className="text-center p-8">Cargando perfil...</div>;
+    if (loading) return <div className="p-4 text-center">Cargando perfil...</div>;
+    if (!perfil || !graduado) return <div className="p-4 text-center">No se encontraron datos del graduado.</div>;
 
     return (
-        <div className="space-y-8 max-w-5xl mx-auto p-4">
-            {/* Sección de Datos Personales con edición */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex justify-between items-center mb-6 border-b pb-4">
-                    <h2 className="text-2xl font-bold text-gray-800">Mi Perfil</h2>
-                    {isEditing ? (
-                        <div className="flex gap-2">
-                            <button onClick={handleCancelEdit} className="bg-gray-200 text-gray-800 py-1 px-3 rounded-lg flex items-center gap-1 hover:bg-gray-300 transition-colors"><XCircle size={16} /> Cancelar</button>
-                            <button onClick={handleSaveChanges} className="bg-green-600 text-white py-1 px-3 rounded-lg flex items-center gap-1 hover:bg-green-700 transition-colors"><Save size={16} /> Guardar</button>
+        <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+            <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+                <div className="p-6">
+                    <div className="flex justify-between items-start mb-6">
+                        <h1 className="text-2xl font-bold text-gray-800">Mi Perfil</h1>
+                        <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition">
+                            Editar Perfil
+                        </button>
+                    </div>
+                    <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            {/* Información Personal */}
+                            <div className="space-y-4">
+                                <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Información Personal</h2>
+                                <div className="flex items-center"><User className="mr-3 text-gray-500" /><span>{graduado.nombre_completo}</span></div>
+                                <div className="flex items-center"><Mail className="mr-3 text-gray-500" /><span>{graduado.correo_electronico}</span></div>
+                                <div className="flex items-center"><Phone className="mr-3 text-gray-500" /><span>{graduado.telefono || 'No especificado'}</span></div>
+                                <div className="flex items-center"><Home className="mr-3 text-gray-500" /><span>{graduado.direccion || 'No especificada'}</span></div>
+                                <div className="flex items-center"><Briefcase className="mr-3 text-gray-500" /><span>{graduado.logros_adicionales || 'Sin logros adicionales'}</span></div>
+                            </div>
+                            {/* Documentos */}
+                            <div className="space-y-4">
+                                <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Mis Documentos</h2>
+                                {documentos.length > 0 ? (
+                                    <ul className="space-y-3">{documentos.map(doc => (
+                                        <li key={doc.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                                            <div className="flex items-center min-w-0"><FileText className="mr-3 text-blue-500 flex-shrink-0" /><div className="min-w-0"><p className="font-medium truncate" title={doc.nombre_archivo}>{doc.nombre_archivo}</p><p className="text-sm text-gray-500">{doc.tipo_documento.replace(/_/g, ' ')}</p></div></div>
+                                            <button onClick={() => handleDocumentView(doc.url_archivo_storage)} className="bg-gray-200 text-gray-700 p-2 rounded-full hover:bg-gray-300 ml-2"><Download size={18} /></button>
+                                        </li>
+                                    ))}</ul>
+                                ) : <p className="text-gray-500">No has subido ningún documento.</p>}
+                                <div className="pt-4 border-t">
+                                    <h3 className="font-semibold mb-2">Subir nuevo documento</h3>
+                                    <select value={documentType} onChange={e => setDocumentType(e.target.value)} className="w-full p-2 border rounded-md mb-2"><option value="titulo_profesional">Título Profesional</option><option value="cedula_identidad">Cédula de Identidad</option><option value="certificado_academico">Certificado Académico</option><option value="otro_relevante">Otro</option></select>
+                                    <input type="file" onChange={e => setSelectedFile(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2" />
+                                    <button onClick={handleFileUpload} disabled={uploading || !selectedFile} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400">{uploading ? 'Subiendo...' : <><Upload size={18} /> Subir Archivo</>}</button>
+                                </div>
+                            </div>
                         </div>
-                    ) : (
-                        <button onClick={() => setIsEditing(true)} className="bg-blue-600 text-white py-1 px-3 rounded-lg flex items-center gap-1 hover:bg-blue-700 transition-colors"><Edit size={16} /> Editar</button>
-                    )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    <div><label className="font-semibold text-gray-600 block mb-1">Nombre:</label> {isEditing ? <input name="nombre_completo" value={profileData.nombre_completo || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.nombre_completo}</span>}</div>
-                    <div><label className="font-semibold text-gray-600 block mb-1">Identificación:</label> {isEditing ? <input name="identificacion" value={profileData.identificacion || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.identificacion}</span>}</div>
-                    <div><label className="font-semibold text-gray-600 block mb-1">Correo:</label> <span className="text-gray-500 bg-gray-100 p-2 rounded-md block">{user.email}</span></div>
-                    <div><label className="font-semibold text-gray-600 block mb-1">Teléfono:</label> {isEditing ? <input name="telefono" value={profileData.telefono || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.telefono}</span>}</div>
-                    <div><label className="font-semibold text-gray-600 block mb-1">Carrera:</label> {isEditing ? <input name="carrera_cursada" value={profileData.carrera_cursada || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.carrera_cursada}</span>}</div>
-                    <div><label className="font-semibold text-gray-600 block mb-1">Año Graduación:</label> {isEditing ? <input type="number" name="ano_graduacion" value={profileData.ano_graduacion || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.ano_graduacion}</span>}</div>
-                    <div className="md:col-span-2"><label className="font-semibold text-gray-600 block mb-1">Dirección:</label> {isEditing ? <input name="direccion" value={profileData.direccion || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.direccion}</span>}</div>
-                    <div className="md:col-span-2"><label className="font-semibold text-gray-600 block mb-1">Zona Geográfica:</label> {isEditing ? <input name="zona_geografica" value={profileData.zona_geografica || ''} onChange={handleInputChange} className="p-2 border rounded w-full" /> : <span className="text-gray-900">{profileData.zona_geografica}</span>}</div>
+                        {/* Historial Académico */}
+                        <div className="mt-8 pt-6 border-t">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Mi Historial Académico</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="bg-gray-50 p-4 rounded-lg"><h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><GraduationCap className="mr-3" />Títulos Obtenidos</h3>{carreras.length > 0 ? (<ul className="space-y-3">{carreras.map(c => (<li key={c.id} className="border-l-4 border-blue-500 pl-4"><p className="font-bold">{c.nombre_carrera}</p><p className="text-sm text-gray-600">Finalizado en {c.ano_finalizacion}</p></li>))}</ul>) : <p className="text-gray-500">No hay títulos registrados.</p>}</div>
+                                <div className="bg-gray-50 p-4 rounded-lg"><h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><CheckCircle className="mr-3 text-green-500" />Talleres Finalizados</h3>{talleresFinalizados.length > 0 ? (<ul className="space-y-2">{talleresFinalizados.map(ins => (<li key={ins.id} className="truncate" title={ins.talleres.nombre}>{ins.talleres.nombre}</li>))}</ul>) : <p className="text-gray-500">Aún no has finalizado talleres.</p>}</div>
+                                <div className="bg-gray-50 p-4 rounded-lg"><h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><Clock className="mr-3 text-orange-500" />Talleres en Curso</h3>{talleresEnCurso.length > 0 ? (<ul className="space-y-2">{talleresEnCurso.map(ins => (<li key={ins.id} className="truncate" title={ins.talleres.nombre}>{ins.talleres.nombre}</li>))}</ul>) : <p className="text-gray-500">No tienes talleres en curso.</p>}</div>
+                            </div>
+                        </div>
+                    </>
                 </div>
             </div>
-
-            {/* Sección de Documentos */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-bold mb-4">Mis Documentos</h3>
-                <div className="bg-gray-50 p-4 rounded-lg border flex flex-col md:flex-row gap-4 items-center mb-6">
-                    <select value={documentType} onChange={(e) => setDocumentType(e.target.value)} className="w-full md:w-auto p-2 border rounded-md">
-                        <option value="curriculum">Currículum</option>
-                        <option value="titulo_profesional">Título Profesional</option>
-                        <option value="cedula_identidad">Cédula de Identidad</option>
-                        <option value="otro_relevante">Otro</option>
-                    </select>
-                    <input type="file" id="file-input-perfil" onChange={handleFileChange} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
-                    <button onClick={handleFileUpload} disabled={uploading || !selectedFile} className="w-full md:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-400 flex items-center justify-center gap-2 shrink-0">
-                        {uploading ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
-                        {uploading ? 'Subiendo...' : 'Subir'}
-                    </button>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                    <h4 className="font-semibold">Documentos Subidos:</h4>
-                    {documents.length > 0 ? (
-                        <ul className="border rounded-md divide-y">
-                            {documents.map(doc => (
-                                <li key={doc.id} className="flex justify-between items-center p-3 hover:bg-gray-50 transition-colors">
-                                    <span className="font-medium text-gray-700">{doc.nombre_archivo}</span>
-                                    <div className="flex items-center gap-4">
-                                        <button onClick={() => handleDownload(doc.url_archivo_storage, doc.nombre_archivo)} disabled={downloadingDocId === doc.id} className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-medium disabled:opacity-50">
-                                            {downloadingDocId === doc.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                                            {downloadingDocId === doc.id ? 'Descargando...' : 'Descargar'}
-                                        </button>
-                                        <button onClick={() => handleDocumentDelete(doc.id)} className="text-red-600 hover:text-red-800 flex items-center gap-1 text-sm font-medium">
-                                            <Trash2 size={16} /> Borrar
-                                        </button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-gray-500 p-3 bg-gray-50 rounded-md">No tienes documentos subidos.</p>
-                    )}
-                </div>
-            </div>
+            {isModalOpen && (<EditGraduadoModal graduado={graduado} onClose={() => setIsModalOpen(false)} onSave={() => { fetchProfile(); setIsModalOpen(false); }} />)}
         </div>
     );
 };

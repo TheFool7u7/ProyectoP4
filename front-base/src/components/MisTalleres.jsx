@@ -39,7 +39,7 @@ const MisTalleres = () => {
         }
     };
 
-    // --- FUNCIÓN PARA ANULAR INSCRIPCIÓN ---
+    //funcion para anular inscripcion 
     const handleUnenroll = async (inscripcionId, nombreTaller) => {
         if (!window.confirm(`¿Estás seguro de que quieres anular tu inscripción al taller "${nombreTaller}"?`)) {
             return;
@@ -98,7 +98,7 @@ const MisTalleres = () => {
                                 </div>
                             </div>
 
-                            {/* --- SECCIÓN DE ACCIONES --- */}
+                            {/* seccion de acciones*/}
                             <div className="bg-gray-50 p-4 border-t space-y-2">
                                 {inscripcion.estado === 'completado_certificado' && inscripcion.url_certificado_storage && (
                                     <button 

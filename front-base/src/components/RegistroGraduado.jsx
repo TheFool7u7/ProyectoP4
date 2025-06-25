@@ -1,76 +1,149 @@
 import React, { useState } from 'react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 
 const RegistroGraduado = () => {
-    const initialFormState = {
+    // Estado unificado para todos los datos del graduado
+    const [formData, setFormData] = useState({
         nombre_completo: '',
         identificacion: '',
-        email: '',
-        password: '',
-        carrera_cursada: '',
-        ano_graduacion: '',
-        // Se pueden añadir más campos aquí, ademas se deben de agregar en el backent
-    };
+        correo_electronico: '',
+        password: '', // Nuevo campo para la contraseña
+        telefono: '',
+        direccion: '',
+        zona_geografica: '',
+        logros_adicionales: '',
+    });
 
-    const [formData, setFormData] = useState(initialFormState);
+    const [carreras, setCarreras] = useState([]);
+    const [carreraActual, setCarreraActual] = useState({ nombre_carrera: '', ano_finalizacion: '' });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [success, setSuccess] = useState('');
     const API_URL = import.meta.env.VITE_API_URL;
 
     const handleChange = (e) => {
-        setFormData(prevState => ({ ...prevState, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleCarreraChange = (e) => {
+        const { name, value } = e.target;
+        setCarreraActual(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleAddCarrera = () => {
+        if (!carreraActual.nombre_carrera || !carreraActual.ano_finalizacion) {
+            alert('Por favor, completa los datos de la carrera.');
+            return;
+        }
+        setCarreras(prev => [...prev, carreraActual]);
+        setCarreraActual({ nombre_carrera: '', ano_finalizacion: '' });
+    };
+
+    const handleRemoveCarrera = (index) => {
+        setCarreras(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!formData.correo_electronico || !formData.password) {
+            alert('El correo electrónico y la contraseña son obligatorios.');
+            return;
+        }
+        if (carreras.length === 0) {
+            alert('Debes añadir al menos una carrera al perfil del graduado.');
+            return;
+        }
         setLoading(true);
-        setError(null);
-        setSuccess('');
+
+        // Se preparan los datos para enviar a la API
+        const payload = {
+            email: formData.correo_electronico,
+            password: formData.password,
+            nombre_completo: formData.nombre_completo,
+            identificacion: formData.identificacion,
+            telefono: formData.telefono,
+            direccion: formData.direccion,
+            zona_geografica: formData.zona_geografica,
+            logros_adicionales: formData.logros_adicionales,
+            carreras: carreras // Se adjunta la lista de carreras
+        };
 
         try {
+            // Se llama al nuevo endpoint unificado
             const response = await fetch(`${API_URL}/api/graduados/admin-create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(payload)
             });
 
             const result = await response.json();
-            if (!response.ok) throw new Error(result.details || 'Ocurrió un error');
+            if (!response.ok) {
+                throw new Error(result.details || result.error || 'Ocurrió un error desconocido.');
+            }
 
-            setSuccess(`¡Usuario ${result.data.email} creado con éxito!`);
-            setFormData(initialFormState); // Limpiar el formulario
+            alert('¡Graduado y usuario registrados exitosamente!');
+            // Limpiar todo el formulario
+            setFormData({
+                nombre_completo: '',
+                identificacion: '',
+                correo_electronico: '',
+                password: '',
+                telefono: '',
+                direccion: '',
+                zona_geografica: '',
+                logros_adicionales: '',
+            });
+            setCarreras([]);
 
-        } catch (err) {
-            setError(err.message);
+        } catch (error) {
+            console.error(error);
+            alert(`Error al registrar: ${error.message}`);
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">Registrar Nuevo Graduado (Admin)</h1>
+        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-lg shadow-md max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-800">Registrar Nuevo Graduado</h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" name="nombre_completo" placeholder="Nombre Completo" value={formData.nombre_completo} onChange={handleChange} required className="p-2 border rounded" />
-                    <input type="text" name="identificacion" placeholder="Identificación" value={formData.identificacion} onChange={handleChange} required className="p-2 border rounded" />
-                    <input type="email" name="email" placeholder="Correo Electrónico" value={formData.email} onChange={handleChange} required className="p-2 border rounded" />
-                    <input type="password" name="password" placeholder="Contraseña Temporal" value={formData.password} onChange={handleChange} required className="p-2 border rounded" />
-                    <input type="text" name="carrera_cursada" placeholder="Carrera Cursada" value={formData.carrera_cursada} onChange={handleChange} className="p-2 border rounded" />
-                    <input type="number" name="ano_graduacion" placeholder="Año de Graduación" value={formData.ano_graduacion} onChange={handleChange} className="p-2 border rounded" />
+            {/* Campos del graduado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <input name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} placeholder="Nombre Completo" required className="p-2 border rounded" />
+                <input name="identificacion" value={formData.identificacion} onChange={handleChange} placeholder="Identificación" required className="p-2 border rounded" />
+                <input type="email" name="correo_electronico" value={formData.correo_electronico} onChange={handleChange} placeholder="Correo Electrónico" required className="p-2 border rounded" />
+                <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Contraseña" required className="p-2 border rounded" />
+                <input name="telefono" value={formData.telefono} onChange={handleChange} placeholder="Teléfono" className="p-2 border rounded" />
+                <input name="direccion" value={formData.direccion} onChange={handleChange} placeholder="Dirección" className="p-2 border rounded" />
+                <input name="zona_geografica" value={formData.zona_geografica} onChange={handleChange} placeholder="Zona Geográfica" className="p-2 border rounded" />
+                <textarea name="logros_adicionales" value={formData.logros_adicionales} onChange={handleChange} placeholder="Logros Adicionales" className="p-2 border rounded md:col-span-2" rows="2"></textarea>
+            </div>
+
+            {/* Sección dinámica de carreras */}
+            <div>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">Carreras Cursadas</h3>
+                <div className="space-y-2">
+                    {carreras.map((c, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-100 p-2 rounded">
+                            <span>{c.nombre_carrera} ({c.ano_finalizacion})</span>
+                            <button type="button" onClick={() => handleRemoveCarrera(index)} className="text-red-500 hover:text-red-700">
+                                <Trash2 size={18} />
+                            </button>
+                        </div>
+                    ))}
                 </div>
-
-                {error && <p className="text-red-600 text-center">{error}</p>}
-                {success && <p className="text-green-600 text-center">{success}</p>}
-
-                <div className="text-right">
-                    <button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg disabled:bg-gray-400">
-                        {loading ? 'Creando Usuario...' : 'Crear Graduado y Usuario'}
+                <div className="flex items-center gap-4 mt-4">
+                    <input name="nombre_carrera" value={carreraActual.nombre_carrera} onChange={handleCarreraChange} placeholder="Nombre de la Carrera" className="p-2 border rounded flex-grow" />
+                    <input type="number" name="ano_finalizacion" value={carreraActual.ano_finalizacion} onChange={handleCarreraChange} placeholder="Año" className="p-2 border rounded w-24" />
+                    <button type="button" onClick={handleAddCarrera} className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600">
+                        <PlusCircle size={22} />
                     </button>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <button type="submit" disabled={loading} className="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 disabled:bg-gray-400">
+                {loading ? 'Registrando...' : 'Registrar Graduado'}
+            </button>
+        </form>
     );
 };
 

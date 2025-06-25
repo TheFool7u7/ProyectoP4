@@ -48,6 +48,7 @@ router.get('/', async (req, res) => {
     res.status(200).json(aplanada);
 });
 
+// DELETE
 router.delete('/:id', async (req, res) => {
     const { id } = req.params; // Se obtiene el ID de los parámetros de la URL
 
@@ -64,6 +65,7 @@ router.delete('/:id', async (req, res) => {
     res.status(200).json({ message: 'Graduado eliminado con éxito' });
 });
 
+// PUT
 router.put('/:id', async (req, res) => {
     const { id } = req.params; // ID del graduado a actualizar
     const updatedData = req.body; // Los nuevos datos del formulario
@@ -86,6 +88,7 @@ router.put('/:id', async (req, res) => {
     res.status(200).json({ message: 'Graduado actualizado con éxito', data: data[0] });
 });
 
+// POST para creación de usuario por admin
 router.post('/admin-create', async (req, res) => {
     const {
         email,
@@ -117,6 +120,131 @@ router.post('/admin-create', async (req, res) => {
     res.status(201).json({ message: 'Graduado y usuario creados con éxito', data: authData.user });
 });
 
+// GET 
+// Obtiene todas las carreras de un graduado específico.
+router.get('/:id/carreras', async (req, res) => {
+    const { id } = req.params;
+    const { data, error } = await supabase
+        .from('graduado_carreras')
+        .select('*')
+        .eq('graduado_id', id)
+        .order('ano_finalizacion', { ascending: false });
 
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json(data);
+});
+
+// POST 
+// Añade una nueva carrera a un graduado.
+router.post('/carreras', async (req, res) => {
+    const { data, error } = await supabase
+        .from('graduado_carreras')
+        .insert([req.body])
+        .select();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(201).json(data[0]);
+});
+
+// DELETE 
+// Elimina una carrera específica por su ID.
+router.delete('/carreras/:carreraId', async (req, res) => {
+    const { carreraId } = req.params;
+    const { error } = await supabase
+        .from('graduado_carreras')
+        .delete()
+        .eq('id', carreraId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json({ message: 'Carrera eliminada exitosamente' });
+});
+
+// POST 
+// Crea un usuario, perfil, graduado y sus carreras desde cero (para administradores) 2.0.
+router.post('/admin-create', async (req, res) => {
+    const {
+        email,
+        password,
+        nombre_completo,
+        identificacion,
+        telefono,
+        direccion,
+        zona_geografica,
+        logros_adicionales,
+        carreras // Lista de carreras
+    } = req.body;
+
+    if (!email || !password || !nombre_completo || !identificacion || !carreras || carreras.length === 0) {
+        return res.status(400).json({ error: 'Faltan datos requeridos. Asegúrese de incluir email, contraseña, nombre, identificación y al menos una carrera.' });
+    }
+
+    // 1. Crear el usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true,
+    });
+
+    if (authError) {
+        console.error("Error al crear usuario de Auth:", authError);
+        return res.status(500).json({ error: "Error al crear el usuario.", details: authError.message });
+    }
+
+    const newUserId = authData.user.id;
+
+    // 2. Crear el registro en 'perfiles' (manejado por trigger, pero verificamos/insertamos por seguridad)
+    // El trigger 'handle_new_user' debería haber creado este perfil.
+    // Si no, lo creamos manualmente.
+    const { error: perfilError } = await supabase
+        .from('perfiles')
+        .upsert({ id: newUserId, nombre_completo: nombre_completo, rol: 'graduado_usuario' });
+    
+    if (perfilError) {
+        await supabase.auth.admin.deleteUser(newUserId); // Cleanup
+        return res.status(500).json({ error: 'Error al asegurar el perfil del usuario.', details: perfilError.message });
+    }
+
+    // 3. Crear el registro en 'graduados'
+    const { data: graduadoData, error: graduadoError } = await supabase
+        .from('graduados')
+        .insert({
+            perfil_id: newUserId,
+            nombre_completo,
+            identificacion,
+            correo_electronico: email,
+            telefono,
+            direccion,
+            zona_geografica,
+            logros_adicionales
+        })
+        .select()
+        .single();
+    
+    if (graduadoError) {
+        await supabase.auth.admin.deleteUser(newUserId); 
+        return res.status(500).json({ error: 'Error al registrar los datos del graduado.', details: graduadoError.message });
+    }
+    
+    const nuevoGraduadoId = graduadoData.id;
+
+    // 4. Insertar las carreras asociadas
+    const carrerasParaInsertar = carreras.map(carrera => ({
+        graduado_id: nuevoGraduadoId,
+        nombre_carrera: carrera.nombre_carrera,
+        ano_finalizacion: carrera.ano_finalizacion
+    }));
+
+    const { error: carrerasError } = await supabase
+        .from('graduado_carreras')
+        .insert(carrerasParaInsertar);
+
+    if (carrerasError) {
+        // En este punto, el usuario está creado pero las carreras no.
+        // Se podría borrar todo para consistencia, pero por ahora se notifica.
+        return res.status(500).json({ error: 'Usuario creado, pero hubo un error al registrar las carreras.', details: carrerasError.message });
+    }
+
+    res.status(201).json({ message: 'Graduado y usuario creados con éxito', data: authData.user });
+});
 
 module.exports = router;

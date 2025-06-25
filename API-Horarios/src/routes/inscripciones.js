@@ -39,6 +39,34 @@ router.get('/:graduadoId', async (req, res) => {
     res.status(200).json(inscripciones);
 });
 
+// GET
+// Obtiene inscripciones usando el ID directo de la tabla 'graduados'
+router.get('/by-graduado/:graduadoId', async (req, res) => {
+    const { graduadoId } = req.params;
+
+    const { data, error } = await supabase
+        .from('graduados_talleres')
+        .select(`
+            id,
+            estado,
+            url_certificado_storage,
+            talleres (
+                nombre,
+                fecha_inicio,
+                descripcion,
+                modalidad
+            )
+        `)
+        .eq('graduado_id', graduadoId);
+
+    if (error) {
+        console.error("Error en /by-graduado:", error);
+        return res.status(500).json({ error: 'Error al obtener las inscripciones.' });
+    }
+    res.status(200).json(data);
+});
+
+
 //POST
 router.post('/', async (req, res) => {
     const { graduado_id, taller_id } = req.body;
