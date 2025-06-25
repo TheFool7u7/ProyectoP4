@@ -13,6 +13,9 @@ const talleresRouter = require("./src/routes/talleres");
 const catalogoRouter = require("./src/routes/catalogo");
 const inscripcionesRouter = require("./src/routes/inscripciones");
 const documentosRouter = require("./src/routes/documentos");
+const usuariosRouter = require("./src/routes/usuarios"); 
+const perfilesRouter = require("./src/routes/perfiles.js");
+const asistenciaRouter = require("./src/routes/asistencia.js");
 
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:5175'];
 
@@ -41,6 +44,9 @@ app.use("/api/talleres", talleresRouter);
 app.use("/api/catalogo", catalogoRouter);
 app.use("/api/inscripciones", inscripcionesRouter);
 app.use("/api/documentos", documentosRouter);
+app.use("/api/usuarios", usuariosRouter);
+app.use("/api/perfiles", perfilesRouter);
+app.use("/api/asistencia", asistenciaRouter);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)

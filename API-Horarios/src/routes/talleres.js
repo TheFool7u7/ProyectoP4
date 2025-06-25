@@ -16,7 +16,7 @@ router.get('/:id/areas', async (req, res) => {
         .from('talleres_areas_interes')
         .select('area_interes_id')
         .eq('taller_id', id);
-    
+
     if (error) return res.status(500).json({ error: error.message });
 
     // Se devuelve solo un array de IDs para que sea fácil de usar en el frontend
@@ -77,7 +77,7 @@ router.put('/:id', async (req, res) => {
         .eq('id', id)
         .select()
         .single();
-    
+
     if (tallerError) return res.status(500).json({ error: tallerError.message });
 
     // 2. Se borran todas las asociaciones de áreas de interés antiguas para este taller
@@ -86,7 +86,7 @@ router.put('/:id', async (req, res) => {
         .from('talleres_areas_interes')
         .delete()
         .eq('taller_id', id);
-    
+
     if (deleteError) return res.status(500).json({ error: 'Taller actualizado, pero falló la limpieza de áreas antiguas.' });
 
     // 3. Si se enviaron nuevos IDs de áreas, se insertan
@@ -95,14 +95,14 @@ router.put('/:id', async (req, res) => {
             taller_id: id,
             area_interes_id: area_id,
         }));
-        
+
         const { error: insertError } = await supabase
             .from('talleres_areas_interes')
             .insert(nuevasRelaciones);
 
         if (insertError) return res.status(500).json({ error: 'Taller actualizado, pero falló la nueva asociación de áreas.' });
     }
-    
+
     res.status(200).json(tallerResult);
 });
 
@@ -116,6 +116,32 @@ router.delete('/:id', async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
     res.status(200).json({ message: 'Taller eliminado con éxito' });
+});
+
+router.get('/:id/inscritos', async (req, res) => {
+    const { id } = req.params;
+
+    // Se  hace un join complejo para obtener la información de la inscripción Y la información del graduado
+    const { data, error } = await supabase
+        .from('graduados_talleres')
+        .select(`
+            id,
+            estado,
+            taller_id,
+            url_certificado_storage, 
+            graduados (
+                id,
+                nombre_completo,
+                correo_electronico
+            )
+        `)
+        .eq('taller_id', id);
+
+    if (error) {
+        return res.status(500).json({ error: 'Error al obtener la lista de inscritos.' });
+    }
+
+    res.status(200).json(data);
 });
 
 module.exports = router;

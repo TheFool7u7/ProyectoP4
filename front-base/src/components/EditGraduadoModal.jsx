@@ -50,7 +50,7 @@ const EditGraduadoModal = ({ isOpen, onClose, graduado, onGraduadoUpdated }) => 
         }
     };
 
-    // FUNCIÓN DE DESCARGA
+    // funcion de descargas
     const handleDownload = async (filePath, fileName) => {
         try {
             // 1. Se genera la URL firmada y segura
@@ -168,7 +168,7 @@ const EditGraduadoModal = ({ isOpen, onClose, graduado, onGraduadoUpdated }) => 
                         <h4 className="font-semibold">Documentos Subidos:</h4>
                         {documents.length > 0 ? (
                             <ul className="border rounded-md divide-y">
-                                {/* LISTA DE DOCUMENTOS */}
+                                {/* lista de documentos */}
                                 {documents.map(doc => (
                                     <li key={doc.id} className="flex justify-between items-center p-3 hover:bg-gray-50">
                                         <span className='text-sm'>{doc.nombre_archivo} ({doc.tipo_documento.replace('_', ' ')})</span>

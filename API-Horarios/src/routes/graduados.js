@@ -27,14 +27,25 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
     const { data, error } = await supabase
         .from('graduados')
-        .select('*'); // Select('*') obtiene todas las columnas de la BD
+        .select(`
+            *,
+            perfiles (
+                rol
+            )
+        `);
 
     if (error) {
         console.error('Error al obtener de Supabase:', error.message);
-        return res.status(500).json({ error: 'Error al obtener los graduados', details: error.message });
+        return res.status(500).json({ error: 'Error al obtener los graduados' });
     }
 
-    res.status(200).json(data); // Se devuelve el array de graduados
+    // se le da formato a la data para que sea más fácil de usar en el frontend
+    const aplanada = data.map(g => ({
+        ...g,
+        rol: g.perfiles?.rol // Mueve el rol al nivel principal del objeto
+    }));
+
+    res.status(200).json(aplanada);
 });
 
 router.delete('/:id', async (req, res) => {
@@ -74,5 +85,38 @@ router.put('/:id', async (req, res) => {
 
     res.status(200).json({ message: 'Graduado actualizado con éxito', data: data[0] });
 });
+
+router.post('/admin-create', async (req, res) => {
+    const {
+        email,
+        password,
+        nombre_completo,
+        identificacion,
+    } = req.body;
+
+    // se crea el usuario en el sistema de Auth de Supabase
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        password: password,
+        email_confirm: true, // se marca el email como confirmado inmediatamente
+        user_metadata: {
+            nombre_completo: nombre_completo,
+            identificacion: identificacion
+        }
+    });
+
+    if (authError) {
+        console.error("Error al crear usuario de Auth:", authError);
+        return res.status(500).json({ error: "Error al crear el usuario en el sistema de autenticación.", details: authError.message });
+    }
+
+    // Si el usuario de Auth se creó, el trigger 'handle_new_user' que ya se
+    // debería haberse disparado y creado los registros en 'perfiles' y 'graduados'.
+
+    // se devuelve el usuario recién creado como confirmación.
+    res.status(201).json({ message: 'Graduado y usuario creados con éxito', data: authData.user });
+});
+
+
 
 module.exports = router;

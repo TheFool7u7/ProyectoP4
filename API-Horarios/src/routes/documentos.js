@@ -16,7 +16,7 @@ router.get('/:graduadoId', async (req, res) => {
 
 // POST
 router.post('/', async (req, res) => {
-    // El body contendrá: { graduado_id, tipo_documento, nombre_archivo, url_archivo_storage }
+    // El body contiene: { graduado_id, tipo_documento, nombre_archivo, url_archivo_storage }
     const { data, error } = await supabase
         .from('documentos_graduados')
         .insert([req.body])
