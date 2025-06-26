@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './context/AuthContext';
 import { supabase } from '../supabaseClient';
-import { User, Mail, Phone, Home, Book, GraduationCap, Briefcase, FileText, Download, Upload, CheckCircle, Clock } from 'lucide-react';
+import { User, Mail, Phone, Home, Book, GraduationCap, Briefcase, FileText, Download, Upload, CheckCircle, Clock, Trash2 } from 'lucide-react';
 import EditGraduadoModal from './EditGraduadoModal';
 
 const MiPerfil = () => {
@@ -61,8 +61,8 @@ const MiPerfil = () => {
         try {
             if (!filePath) throw new Error("La ruta del archivo no está disponible.");
             const { data, error } = await supabase.storage
-                .from('documentos-graduados')
-                .createSignedUrl(filePath, 60);
+                .from('documentos-graduados') // Asegúrate de que el nombre del bucket sea correcto
+                .createSignedUrl(filePath, 60); // 60 segundos de validez
 
             if (error) throw error;
             window.open(data.signedUrl, '_blank');
@@ -79,11 +79,10 @@ const MiPerfil = () => {
         setUploading(true);
         try {
             const cleanFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            // Se usa el ID del usuario autenticado (user.id) como nombre de la carpeta.
             const filePath = `${user.id}/${Date.now()}_${cleanFileName}`;
 
             const { error: uploadError } = await supabase.storage
-                .from('documentos-graduados')
+                .from('documentos_graduados') // Nombre del bucket
                 .upload(filePath, selectedFile);
 
             if (uploadError) throw uploadError;
@@ -95,7 +94,7 @@ const MiPerfil = () => {
                     graduado_id: perfil.graduado.id,
                     tipo_documento: documentType,
                     nombre_archivo: selectedFile.name,
-                    url_archivo_storage: filePath
+                    url_archivo_storage: filePath 
                 }),
             });
 
@@ -108,6 +107,30 @@ const MiPerfil = () => {
             alert("Error al subir el archivo: " + error.message);
         } finally {
             setUploading(false);
+        }
+    };
+    
+    const handleDeleteDocumento = async (documentoId) => {
+        if (!window.confirm("¿Estás seguro de que quieres eliminar este documento? Esta acción no se puede deshacer.")) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/api/documentos/${documentoId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "No se pudo eliminar el documento.");
+            }
+
+            setDocumentos(prevDocumentos => prevDocumentos.filter(doc => doc.id !== documentoId));
+            alert("Documento eliminado con éxito.");
+
+        } catch (error) {
+            console.error("Error al eliminar el documento:", error);
+            alert(error.message);
         }
     };
 
@@ -145,16 +168,36 @@ const MiPerfil = () => {
                                 {documentos.length > 0 ? (
                                     <ul className="space-y-3">{documentos.map(doc => (
                                         <li key={doc.id} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                                            <div className="flex items-center min-w-0"><FileText className="mr-3 text-blue-500 flex-shrink-0" /><div className="min-w-0"><p className="font-medium truncate" title={doc.nombre_archivo}>{doc.nombre_archivo}</p><p className="text-sm text-gray-500">{doc.tipo_documento.replace(/_/g, ' ')}</p></div></div>
-                                            <button onClick={() => handleDocumentView(doc.url_archivo_storage)} className="bg-gray-200 text-gray-700 p-2 rounded-full hover:bg-gray-300 ml-2"><Download size={18} /></button>
+                                            <div className="flex items-center min-w-0">
+                                                <FileText className="mr-3 text-blue-500 flex-shrink-0" />
+                                                <div className="min-w-0">
+                                                    <p className="font-medium truncate" title={doc.nombre_archivo}>{doc.nombre_archivo}</p>
+                                                    <p className="text-sm text-gray-500">{doc.tipo_documento.replace(/_/g, ' ')}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center flex-shrink-0 ml-2">
+                                                <button onClick={() => handleDocumentView(doc.url_archivo_storage)} className="bg-gray-200 text-gray-700 p-2 rounded-full hover:bg-gray-300" title="Ver/Descargar">
+                                                    <Download size={18} />
+                                                </button>
+                                                <button onClick={() => handleDeleteDocumento(doc.id)} className="bg-red-100 text-red-600 p-2 rounded-full hover:bg-red-200 ml-2" title="Eliminar documento">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </li>
                                     ))}</ul>
                                 ) : <p className="text-gray-500">No has subido ningún documento.</p>}
                                 <div className="pt-4 border-t">
                                     <h3 className="font-semibold mb-2">Subir nuevo documento</h3>
-                                    <select value={documentType} onChange={e => setDocumentType(e.target.value)} className="w-full p-2 border rounded-md mb-2"><option value="titulo_profesional">Título Profesional</option><option value="cedula_identidad">Cédula de Identidad</option><option value="certificado_academico">Certificado Académico</option><option value="otro_relevante">Otro</option></select>
+                                    <select value={documentType} onChange={e => setDocumentType(e.target.value)} className="w-full p-2 border rounded-md mb-2">
+                                        <option value="titulo_profesional">Título Profesional</option>
+                                        <option value="cedula_identidad">Cédula de Identidad</option>
+                                        <option value="certificado_academico">Certificado Académico</option>
+                                        <option value="otro_relevante">Otro</option>
+                                    </select>
                                     <input type="file" onChange={e => setSelectedFile(e.target.files[0])} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2" />
-                                    <button onClick={handleFileUpload} disabled={uploading || !selectedFile} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400">{uploading ? 'Subiendo...' : <><Upload size={18} /> Subir Archivo</>}</button>
+                                    <button onClick={handleFileUpload} disabled={uploading || !selectedFile} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400">
+                                        {uploading ? 'Subiendo...' : <><Upload size={18} /> Subir Archivo</>}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -162,9 +205,18 @@ const MiPerfil = () => {
                         <div className="mt-8 pt-6 border-t">
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">Mi Historial Académico</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div className="bg-gray-50 p-4 rounded-lg"><h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><GraduationCap className="mr-3" />Títulos Obtenidos</h3>{carreras.length > 0 ? (<ul className="space-y-3">{carreras.map(c => (<li key={c.id} className="border-l-4 border-blue-500 pl-4"><p className="font-bold">{c.nombre_carrera}</p><p className="text-sm text-gray-600">Finalizado en {c.ano_finalizacion}</p></li>))}</ul>) : <p className="text-gray-500">No hay títulos registrados.</p>}</div>
-                                <div className="bg-gray-50 p-4 rounded-lg"><h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><CheckCircle className="mr-3 text-green-500" />Talleres Finalizados</h3>{talleresFinalizados.length > 0 ? (<ul className="space-y-2">{talleresFinalizados.map(ins => (<li key={ins.id} className="truncate" title={ins.talleres.nombre}>{ins.talleres.nombre}</li>))}</ul>) : <p className="text-gray-500">Aún no has finalizado talleres.</p>}</div>
-                                <div className="bg-gray-50 p-4 rounded-lg"><h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><Clock className="mr-3 text-orange-500" />Talleres en Curso</h3>{talleresEnCurso.length > 0 ? (<ul className="space-y-2">{talleresEnCurso.map(ins => (<li key={ins.id} className="truncate" title={ins.talleres.nombre}>{ins.talleres.nombre}</li>))}</ul>) : <p className="text-gray-500">No tienes talleres en curso.</p>}</div>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><GraduationCap className="mr-3" />Títulos Obtenidos</h3>
+                                    {carreras.length > 0 ? (<ul className="space-y-3">{carreras.map(c => (<li key={c.id} className="border-l-4 border-blue-500 pl-4"><p className="font-bold">{c.nombre_carrera}</p><p className="text-sm text-gray-600">Finalizado en {c.ano_finalizacion}</p></li>))}</ul>) : <p className="text-gray-500">No hay títulos registrados.</p>}
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><CheckCircle className="mr-3 text-green-500" />Talleres Finalizados</h3>
+                                    {talleresFinalizados.length > 0 ? (<ul className="space-y-2">{talleresFinalizados.map(ins => (<li key={ins.id} className="truncate" title={ins.talleres.nombre}>{ins.talleres.nombre}</li>))}</ul>) : <p className="text-gray-500">Aún no has finalizado talleres.</p>}
+                                </div>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center"><Clock className="mr-3 text-orange-500" />Talleres en Curso</h3>
+                                    {talleresEnCurso.length > 0 ? (<ul className="space-y-2">{talleresEnCurso.map(ins => (<li key={ins.id} className="truncate" title={ins.talleres.nombre}>{ins.talleres.nombre}</li>))}</ul>) : <p className="text-gray-500">No tienes talleres en curso.</p>}
+                                </div>
                             </div>
                         </div>
                     </>

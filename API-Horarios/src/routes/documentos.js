@@ -31,7 +31,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
-        // --- Paso 1: Obtener la URL del documento desde la base de datos ---
+        // 1. Obtener la URL del documento que vamos a borrar.
         const { data: docData, error: findError } = await supabase
             .from('documentos_graduados')
             .select('url_archivo_storage')
@@ -42,36 +42,37 @@ router.delete('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Registro de documento no encontrado.' });
         }
 
-        // Se extrae solo el nombre del archivo de la URL completa.
         const url = docData.url_archivo_storage;
+        // Extraemos solo el nombre del archivo de la URL. Este método es seguro.
         const filePath = url.substring(url.lastIndexOf('/') + 1);
         
-        console.log(`Intentando eliminar el archivo: "${filePath}" del bucket.`);
-
-        // --- Paso 2: Eliminar el archivo del Storage usando solo su ruta/nombre ---
+        // 2. Eliminar el archivo del Storage.
+        // ¡CORRECCIÓN CRÍTICA! Usamos el nombre del bucket con guion bajo.
         const { error: storageError } = await supabase.storage
-            .from('documentos-graduados') // Asegúrate que 'documentos-graduados' es el nombre exacto del bucket
+            .from('documentos_graduados') // <-- CORREGIDO: con guion bajo
             .remove([filePath]);
 
         if (storageError) {
-            // Este warning es útil si el archivo ya no existe en el storage pero sí en la DB.
-            console.warn("Advertencia de Storage:", storageError.message);
+            // No detenemos el proceso si el archivo no se encuentra, pero es bueno saberlo.
+            console.warn(`Advertencia al borrar de Storage: ${storageError.message}. Se continuará borrando el registro de la base de datos.`);
         }
         
-        // --- Paso 3: Eliminar el registro de la base de datos ---
+        // 3. Eliminar el registro de la base de datos.
         const { error: dbError } = await supabase
             .from('documentos_graduados')
             .delete()
             .eq('id', id);
 
         if (dbError) {
-            return res.status(500).json({ error: 'Error al eliminar el registro del documento.', details: dbError.message });
+            throw new Error(dbError.message);
         }
 
         res.status(200).json({ message: 'Documento eliminado con éxito.' });
     
     } catch (error) {
+        console.error("Error completo al eliminar documento:", error);
         res.status(500).json({ error: "Error inesperado en el servidor.", details: error.message });
     }
 });
+
 module.exports = router;
