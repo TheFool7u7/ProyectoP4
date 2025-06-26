@@ -19,7 +19,8 @@ const perfilesRouter = require("./src/routes/perfiles.js");
 const asistenciaRouter = require("./src/routes/asistencia.js");
 const notificacionesRouter = require("./src/routes/notificaciones");
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5175'];
+const allowedOrigins = [process.env.FRONTEND_URL
+];
 
 app.use(cors({
   origin: (origin, callback) => {

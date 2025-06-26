@@ -1,4 +1,5 @@
 const express = require('express');
+require('dotenv').config();
 const router = express.Router();
 const { supabase } = require('../config/supabaseClient');
 const { sendEmail } = require('../config/mailer');
@@ -33,23 +34,27 @@ router.post('/request-password-reset', async (req, res) => {
     }
 
     try {
-        // 2. Se genera un enlace de un solo uso SIN que Supabase envíe el correo.
-        // se usa el método de admin para tener más control.
+        // Se define la URL a la que el usuario será redirigido después de la actualización.
+        const redirectTo = `${process.env.FRONTEND_URL}/update-password`;
+
+        // 2. Se genera un enlace de un solo uso con la opción `redirectTo`.
         const { data, error } = await supabase.auth.admin.generateLink({
             type: 'recovery',
             email: email,
+            options: {
+                redirectTo: redirectTo // <-- Se pasa la URL de redirección
+            }
         });
 
         if (error) {
-            // No se revela si el correo existe o no por seguridad, pero sí registramos el fallo.
             console.error("Error al generar enlace de reseteo:", error.message);
-            // Se devuelve siempre una respuesta genérica exitosa.
             return res.status(200).json({ message: 'Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer la contraseña.' });
         }
-        
+
+        // La propiedad que contiene el enlace ahora está dentro de `data.properties`.
         const resetLink = data.properties.action_link;
 
-        // 3. Ahora, se envia el enlace usando el servicio de correo.
+        // 3. Se envía el enlace usando el servicio de correo.
         const mailOptions = {
             from: `"Sistema de Graduados" <${process.env.GMAIL_USER}>`,
             to: email,
@@ -73,12 +78,11 @@ router.post('/request-password-reset', async (req, res) => {
 
         await sendEmail(mailOptions);
 
-        // 4. Se enviamos la respuesta genérica al usuario.
+        // 4. Se envía la respuesta genérica al usuario.
         res.status(200).json({ message: 'Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer la contraseña.' });
 
     } catch (error) {
         console.error("Error en el proceso de restablecer contraseña:", error.message);
-        // Se envia una respuesta genérica incluso si el servicio de correo falla, por seguridad.
         res.status(200).json({ message: 'Si existe una cuenta con ese correo, se ha enviado un enlace para restablecer la contraseña.' });
     }
 });
