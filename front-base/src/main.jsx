@@ -5,6 +5,7 @@ import './index.css';
 import { AuthProvider } from './components/context/AuthContext';
 import Layout from './components/Layout';
 import PrivateRoute from "./components/routes/PrivateRoute";
+import AdminRoute from "./components/routes/AdminRoute"
 import Login from "./components/Login";
 import SignUp from "./components/SignUp";
 import CatalogoTalleres from './components/CatalogoTalleres';
@@ -25,6 +26,7 @@ import RealizarEncuesta from './components/RealizarEncuesta';
 import ResultadosEncuesta from './components/ResultadosEncuesta';
 import DiseñadorEncuesta from './components/DiseñadorEncuesta';
 import PreviewEncuesta from './components/PreviewEncuesta';
+import Reportes from './components/Reportes';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -57,6 +59,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="encuesta/:encuestaId/resultados" element={<ResultadosEncuesta />} />
             <Route path="encuesta/builder/:encuestaId" element={<DiseñadorEncuesta />} />
             <Route path="encuesta/preview/:encuestaId" element={<PreviewEncuesta />} />
+            <Route path="reportes" element={<AdminRoute><Reportes /></AdminRoute>} />
           </Route>
         </Routes>
       </AuthProvider>

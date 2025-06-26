@@ -2,7 +2,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from "./context/AuthContext";
 import {
     LayoutGrid, BookOpen, Users, GraduationCap, LogOut, Menu, UserPlus,
-    Lightbulb, Star, ClipboardList, UserCircle, BookCheck
+    Lightbulb, Star, ClipboardList, UserCircle, BookCheck, BarChart2
 } from "lucide-react";
 
 const Sidebar = ({ isMinimized, toggleSidebar }) => {
@@ -13,34 +13,33 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
         await signOut();
     };
 
-    // listas de enlaces base
+    // Listas de enlaces base
     const graduateLinks = [
         { name: "Inicio", path: "/home", icon: LayoutGrid },
         { name: "Mi Perfil", path: "/mi-perfil", icon: UserCircle },
         { name: "Catálogo de Talleres", path: "/catalogo-talleres", icon: ClipboardList },
         { name: "Mis Talleres", path: "/mis-talleres", icon: BookCheck },
         { name: "Mis Preferencias", path: "/mis-preferencias", icon: Star },
-        { name: "Encuestas", path: "/encuestas", icon: ClipboardList }, 
+        { name: "Encuestas", path: "/encuestas", icon: ClipboardList },
     ];
 
     const facilitatorLinks = [
         { name: "Gestionar Mis Talleres", path: "/talleres", icon: BookOpen },
-        { name: "Gestionar Encuestas", path: "/gestion-encuestas", icon: ClipboardList }, 
+        { name: "Gestionar Encuestas", path: "/gestion-encuestas", icon: ClipboardList },
     ];
 
     const adminLinks = [
         { name: "Ver Graduados", path: "/graduados", icon: Users },
         { name: "Registrar Graduado", path: "/graduados/registro", icon: UserPlus },
         { name: "Áreas de Interés", path: "/areas-interes", icon: Lightbulb },
+        { name: "Reportes", path: "/reportes", icon: BarChart2 }, 
     ];
 
-    let menuItems = graduateLinks; // Base para todos los usuarios logueados
+    let menuItems = graduateLinks; 
 
     if (user?.rol === 'facilitador') {
-        // Si es facilitador, se añade sus enlaces específicos
         menuItems = [...menuItems, ...facilitatorLinks];
     } else if (user?.rol === 'administrador') {
-        // Si es admin, se añade los de facilitador (con nombre cambiado) Y los de admin
         const adminTallerLink = { ...facilitatorLinks[0], name: "Gestionar Talleres" };
         const adminEncuestaLink = { ...facilitatorLinks[1], name: "Gestionar Encuestas" };
         menuItems = [...menuItems, adminTallerLink, adminEncuestaLink, ...adminLinks];
@@ -52,13 +51,12 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
                 } bg-white border-r shadow-sm p-4 transition-all duration-300`}
         >
             <div className="w-full">
-                {/* logo */}
+                {/* Logo  */}
                 <nav className="space-y-2 mt-8">
                     {menuItems.map(({ name, path, icon: Icon }) => (
                         <button
                             key={path}
                             onClick={() => navigate(path)}
-                            // estilos del botón
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                                 useLocation().pathname === path
                                 ? "bg-blue-50 text-blue-700"
