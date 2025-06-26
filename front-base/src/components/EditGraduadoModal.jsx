@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, FileText } from 'lucide-react';
 
 const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
-    // Estado para los datos personales del graduado
     const [formData, setFormData] = useState({});
-    // Estado para la lista de carreras
     const [carreras, setCarreras] = useState([]);
-    // Estado para la nueva carrera que se está añadiendo
     const [carreraActual, setCarreraActual] = useState({ nombre_carrera: '', ano_finalizacion: '' });
     const [loading, setLoading] = useState(false);
+    const [documentos, setDocumentos] = useState([]);
+    const [loadingDocs, setLoadingDocs] = useState(false);
+
     const API_URL = import.meta.env.VITE_API_URL;
 
-    // Inicializa el modal con todos los datos cuando se abre
     useEffect(() => {
         if (graduado) {
             setFormData({
@@ -23,15 +22,35 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                 logros_adicionales: graduado.logros_adicionales || '',
             });
 
-            // Carga las carreras existentes del graduado
             const fetchCarreras = async () => {
-                const response = await fetch(`${API_URL}/api/graduados/${graduado.id}/carreras`);
-                if (response.ok) {
-                    const data = await response.json();
-                    setCarreras(data);
+                try {
+                    const response = await fetch(`${API_URL}/api/graduados/${graduado.id}/carreras`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setCarreras(data);
+                    }
+                } catch (error) {
+                    console.error("Error al cargar carreras:", error);
                 }
             };
+            
+            const fetchDocumentos = async () => {
+                setLoadingDocs(true);
+                try {
+                    const response = await fetch(`${API_URL}/api/documentos/${graduado.id}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setDocumentos(data);
+                    }
+                } catch (error) {
+                    console.error("Error al cargar documentos:", error);
+                } finally {
+                    setLoadingDocs(false);
+                }
+            };
+
             fetchCarreras();
+            fetchDocumentos(); 
         }
     }, [graduado, API_URL]);
 
@@ -45,54 +64,56 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
         setCarreraActual(prev => ({ ...prev, [name]: value }));
     };
 
-    //logica de la carrera
-
     const handleAddCarrera = async () => {
-        if (!carreraActual.nombre_carrera || !carreraActual.ano_finalizacion) {
-            alert('Por favor, completa los datos de la carrera.');
-            return;
-        }
+        if (!carreraActual.nombre_carrera || !carreraActual.ano_finalizacion) return;
         const response = await fetch(`${API_URL}/api/graduados/carreras`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...carreraActual, graduado_id: graduado.id })
         });
         if (response.ok) {
             const nuevaCarrera = await response.json();
             setCarreras(prev => [...prev, nuevaCarrera]);
             setCarreraActual({ nombre_carrera: '', ano_finalizacion: '' });
-        } else {
-            alert("Error al añadir la carrera.");
-        }
+        } else alert("Error al añadir la carrera.");
     };
 
     const handleRemoveCarrera = async (carreraId) => {
-        if (!window.confirm("¿Estás seguro de que quieres eliminar esta carrera?")) return;
-        
+        if (!window.confirm("¿Seguro que quieres eliminar esta carrera?")) return;
         const response = await fetch(`${API_URL}/api/graduados/carreras/${carreraId}`, { method: 'DELETE' });
-        if (response.ok) {
-            setCarreras(prev => prev.filter(c => c.id !== carreraId));
-        } else {
-            alert("Error al eliminar la carrera.");
-        }
+        if (response.ok) setCarreras(prev => prev.filter(c => c.id !== carreraId));
+        else alert("Error al eliminar la carrera.");
     };
 
-    //envio del formulario
+    const handleDeleteDocumento = async (documentoId) => {
+        if (!window.confirm("¿Estás seguro de que quieres eliminar este documento? Esta acción es permanente.")) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_URL}/api/documentos/${documentoId}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'No se pudo eliminar el documento.');
+            }
+            alert("Documento eliminado con éxito.");
+            setDocumentos(prev => prev.filter(doc => doc.id !== documentoId)); 
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Solo actualiza los datos personales, ya que las carreras se gestionan por separado
             const response = await fetch(`${API_URL}/api/graduados/${graduado.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
             if (!response.ok) throw new Error('No se pudo actualizar la información personal.');
-            
             alert('Perfil actualizado con éxito.');
-            onSave(); // Llama a la función del padre para recargar datos y cerrar
+            onSave();
         } catch (error) {
             alert(`Error: ${error.message}`);
         } finally {
@@ -111,6 +132,7 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                         {/* Columna de Información Personal */}
                         <div className="space-y-4">
                             <h3 className="font-semibold text-lg border-b pb-2">Información Personal</h3>
+                            {/* ... campos de formulario ... */}
                             <div><label className="block text-sm font-medium">Nombre Completo</label><input type="text" name="nombre_completo" value={formData.nombre_completo || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" required /></div>
                             <div><label className="block text-sm font-medium">Identificación</label><input type="text" name="identificacion" value={formData.identificacion || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" required /></div>
                             <div><label className="block text-sm font-medium">Teléfono</label><input type="text" name="telefono" value={formData.telefono || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" /></div>
@@ -118,24 +140,47 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                             <div><label className="block text-sm font-medium">Zona Geográfica</label><input type="text" name="zona_geografica" value={formData.zona_geografica || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" /></div>
                             <div><label className="block text-sm font-medium">Logros Adicionales</label><textarea name="logros_adicionales" value={formData.logros_adicionales || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" rows="2"></textarea></div>
                         </div>
-                        {/* Columna de Carreras */}
-                        <div className="space-y-4">
-                            <h3 className="font-semibold text-lg border-b pb-2">Títulos Obtenidos</h3>
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
-                                {carreras.map((c) => (
-                                    <div key={c.id} className="flex items-center justify-between bg-gray-100 p-2 rounded">
-                                        <span>{c.nombre_carrera} ({c.ano_finalizacion})</span>
-                                        <button type="button" onClick={() => handleRemoveCarrera(c.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
-                                    </div>
-                                ))}
+
+                        {/* Columna de Carreras y Documentos */}
+                        <div className="space-y-6"> {/* Aumenta el espaciado  */}
+                            {/* Sección de Títulos */}
+                            <div>
+                                <h3 className="font-semibold text-lg border-b pb-2">Títulos Obtenidos</h3>
+                                <div className="space-y-2 mt-4 max-h-40 overflow-y-auto pr-2">
+                                    {carreras.map(c => (
+                                        <div key={c.id} className="flex items-center justify-between bg-gray-100 p-2 rounded">
+                                            <span>{c.nombre_carrera} ({c.ano_finalizacion})</span>
+                                            <button type="button" onClick={() => handleRemoveCarrera(c.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2 pt-2 border-t mt-2">
+                                    <input name="nombre_carrera" value={carreraActual.nombre_carrera} onChange={handleCarreraChange} placeholder="Nombre de Carrera" className="p-2 border rounded flex-grow"/>
+                                    <input type="number" name="ano_finalizacion" value={carreraActual.ano_finalizacion} onChange={handleCarreraChange} placeholder="Año" className="p-2 border rounded w-24"/>
+                                    <button type="button" onClick={handleAddCarrera} className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 shrink-0"><PlusCircle size={22}/></button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 pt-2 border-t">
-                                <input name="nombre_carrera" value={carreraActual.nombre_carrera} onChange={handleCarreraChange} placeholder="Nombre de Carrera" className="p-2 border rounded flex-grow"/>
-                                <input type="number" name="ano_finalizacion" value={carreraActual.ano_finalizacion} onChange={handleCarreraChange} placeholder="Año" className="p-2 border rounded w-24"/>
-                                <button type="button" onClick={handleAddCarrera} className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 shrink-0"><PlusCircle size={22}/></button>
+                            
+                            {/* --- Sección de Documentos --- */}
+                            <div>
+                                <h3 className="font-semibold text-lg border-b pb-2">Documentos Adjuntos</h3>
+                                <div className="space-y-2 mt-4 max-h-40 overflow-y-auto pr-2">
+                                    {loadingDocs ? <p>Cargando documentos...</p> : 
+                                        documentos.length > 0 ? documentos.map(doc => (
+                                            <div key={doc.id} className="flex items-center justify-between bg-gray-100 p-2 rounded">
+                                                <a href={doc.url_archivo_storage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline truncate" title={doc.nombre_archivo}>
+                                                    <FileText size={18} />
+                                                    <span className="truncate">{doc.nombre_archivo}</span>
+                                                </a>
+                                                <button type="button" onClick={() => handleDeleteDocumento(doc.id)} className="text-red-500 hover:text-red-700 shrink-0 ml-2"><Trash2 size={18} /></button>
+                                            </div>
+                                        )) : <p className="text-gray-500">No hay documentos adjuntos.</p>
+                                    }
+                                </div>
                             </div>
                         </div>
                     </div>
+                    {/* Botones de acción */}
                     <div className="flex justify-end gap-4 pt-6 mt-6 border-t">
                         <button type="button" onClick={onClose} className="bg-gray-300 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-400">Cancelar</button>
                         <button type="submit" disabled={loading} className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400">{loading ? 'Guardando...' : 'Guardar Cambios'}</button>
