@@ -19,6 +19,12 @@ import MisTalleres from './components/MisTalleres';
 import AsistenciaTaller from './components/AsistenciaTaller';
 import ForgotPassword from './components/ForgotPassword';
 import UpdatePassword from './components/UpdatePassword';
+import GestionEncuestas from './components/GestionEncuestas';
+import VerEncuestas from './components/VerEncuestas';
+import RealizarEncuesta from './components/RealizarEncuesta';
+import ResultadosEncuesta from './components/ResultadosEncuesta';
+import DiseñadorEncuesta from './components/DiseñadorEncuesta';
+import PreviewEncuesta from './components/PreviewEncuesta';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -45,6 +51,12 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="talleres" element={<GestionTalleres />} />
             <Route path="/taller/:tallerId/asistencia" element={<AsistenciaTaller />} />
             <Route path="mis-talleres" element={<MisTalleres />} />
+            <Route path="gestion-encuestas" element={<GestionEncuestas />} />
+            <Route path="encuestas" element={<VerEncuestas />} />
+            <Route path="encuesta/:encuestaId" element={<RealizarEncuesta />} />
+            <Route path="encuesta/:encuestaId/resultados" element={<ResultadosEncuesta />} />
+            <Route path="encuesta/builder/:encuestaId" element={<DiseñadorEncuesta />} />
+            <Route path="encuesta/preview/:encuestaId" element={<PreviewEncuesta />} />
           </Route>
         </Routes>
       </AuthProvider>

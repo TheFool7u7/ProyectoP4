@@ -18,6 +18,8 @@ const usuariosRouter = require("./src/routes/usuarios");
 const perfilesRouter = require("./src/routes/perfiles.js");
 const asistenciaRouter = require("./src/routes/asistencia.js");
 const notificacionesRouter = require("./src/routes/notificaciones");
+const encuestasRouter = require("./src/routes/encuestas.js");
+const perfilRouter = require('./src/routes/perfil');
 
 const allowedOrigins = [process.env.FRONTEND_URL
 ];
@@ -51,6 +53,8 @@ app.use("/api/usuarios", usuariosRouter);
 app.use("/api/perfiles", perfilesRouter);
 app.use("/api/asistencia", asistenciaRouter);
 app.use("/api/notificaciones", notificacionesRouter);
+app.use("/api/encuestas", encuestasRouter);
+app.use('/api/perfil', perfilRouter); 
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)

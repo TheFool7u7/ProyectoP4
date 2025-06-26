@@ -11,7 +11,6 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
 
     const handleLogout = async () => {
         await signOut();
-        // La redirección ahora se maneja en el AuthContext o en un componente superior
     };
 
     // listas de enlaces base
@@ -21,10 +20,12 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
         { name: "Catálogo de Talleres", path: "/catalogo-talleres", icon: ClipboardList },
         { name: "Mis Talleres", path: "/mis-talleres", icon: BookCheck },
         { name: "Mis Preferencias", path: "/mis-preferencias", icon: Star },
+        { name: "Encuestas", path: "/encuestas", icon: ClipboardList }, 
     ];
 
     const facilitatorLinks = [
         { name: "Gestionar Mis Talleres", path: "/talleres", icon: BookOpen },
+        { name: "Gestionar Encuestas", path: "/gestion-encuestas", icon: ClipboardList }, 
     ];
 
     const adminLinks = [
@@ -41,7 +42,8 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
     } else if (user?.rol === 'administrador') {
         // Si es admin, se añade los de facilitador (con nombre cambiado) Y los de admin
         const adminTallerLink = { ...facilitatorLinks[0], name: "Gestionar Talleres" };
-        menuItems = [...menuItems, adminTallerLink, ...adminLinks];
+        const adminEncuestaLink = { ...facilitatorLinks[1], name: "Gestionar Encuestas" };
+        menuItems = [...menuItems, adminTallerLink, adminEncuestaLink, ...adminLinks];
     }
 
     return (
@@ -58,8 +60,8 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
                             onClick={() => navigate(path)}
                             // estilos del botón
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                                useLocation().pathname === path 
-                                ? "bg-blue-50 text-blue-700" 
+                                useLocation().pathname === path
+                                ? "bg-blue-50 text-blue-700"
                                 : "text-gray-600 hover:bg-gray-50"
                             }`}
                         >
