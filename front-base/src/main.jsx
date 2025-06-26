@@ -17,6 +17,8 @@ import GestionAreas from './components/GestionAreas';
 import MiPerfil from './components/MiPerfil';
 import MisTalleres from './components/MisTalleres';
 import AsistenciaTaller from './components/AsistenciaTaller';
+import ForgotPassword from './components/ForgotPassword';
+import UpdatePassword from './components/UpdatePassword';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -25,6 +27,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route
             path="/"
             element={<PrivateRoute><Layout /></PrivateRoute>}

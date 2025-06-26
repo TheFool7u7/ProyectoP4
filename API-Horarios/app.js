@@ -1,3 +1,4 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require('cors');
@@ -16,6 +17,7 @@ const documentosRouter = require("./src/routes/documentos");
 const usuariosRouter = require("./src/routes/usuarios"); 
 const perfilesRouter = require("./src/routes/perfiles.js");
 const asistenciaRouter = require("./src/routes/asistencia.js");
+const notificacionesRouter = require("./src/routes/notificaciones");
 
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:5175'];
 
@@ -47,6 +49,7 @@ app.use("/api/documentos", documentosRouter);
 app.use("/api/usuarios", usuariosRouter);
 app.use("/api/perfiles", perfilesRouter);
 app.use("/api/asistencia", asistenciaRouter);
+app.use("/api/notificaciones", notificacionesRouter);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)

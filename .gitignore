@@ -1,0 +1,8 @@
+# Ignorar archivos de entorno
+/API-Horarios/.env
+/front-base/.env
+
+# Otras recomendaciones para un proyecto Node/React
+/API-Horarios/node_modules
+/front-base/node_modules
+/front-base/dist

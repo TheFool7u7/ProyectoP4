@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
-import { Link } from 'react-router-dom'; 
-import { Plus, Pencil, Trash2, ClipboardCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+// 1. Se importa el nuevo ícono 'Mail'
+import { Plus, Pencil, Trash2, ClipboardCheck, Mail } from 'lucide-react';
 
 const GestionTalleres = () => {
     const { user } = useAuth();
@@ -15,6 +16,9 @@ const GestionTalleres = () => {
     const [allAreas, setAllAreas] = useState([]);
     const [currentTaller, setCurrentTaller] = useState(null);
 
+    // 2. Nuevo estado para manejar el estado de carga de la notificación
+    const [notifyingTallerId, setNotifyingTallerId] = useState(null);
+
     const API_URL = import.meta.env.VITE_API_URL;
 
     useEffect(() => {
@@ -27,11 +31,11 @@ const GestionTalleres = () => {
                     fetch(`${API_URL}/api/usuarios/facilitadores`)
                 ]);
                 if (!talleresRes.ok || !areasRes.ok || !facilitadoresRes.ok) throw new Error('Error al cargar los datos iniciales');
-                
+
                 const talleresData = await talleresRes.json();
                 const areasData = await areasRes.json();
                 const facilitadoresData = await facilitadoresRes.json();
-                
+
                 setTalleres(talleresData);
                 setAllAreas(areasData);
                 setFacilitadores(facilitadoresData);
@@ -125,6 +129,30 @@ const GestionTalleres = () => {
         }
     };
 
+    // 3. Nueva función para manejar el envío de notificaciones
+    const handleNotificar = async (tallerId) => {
+        if (!window.confirm("¿Estás seguro de que quieres enviar una notificación por correo a todos los graduados interesados en este taller?")) {
+            return;
+        }
+        setNotifyingTallerId(tallerId);
+        try {
+            const response = await fetch(`${API_URL}/api/notificaciones/taller`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ taller_id: tallerId }),
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                throw new Error(result.error || 'Ocurrió un error desconocido.');
+            }
+            alert(result.message);
+        } catch (error) {
+            alert(`Error al notificar: ${error.message}`);
+        } finally {
+            setNotifyingTallerId(null);
+        }
+    };
+
     const talleresMostrados = user.rol === 'facilitador'
         ? talleres.filter(taller => taller.facilitador_perfil_id === user.id)
         : talleres;
@@ -143,50 +171,67 @@ const GestionTalleres = () => {
 
             <div className="overflow-x-auto">
                 {loading ? <p className="text-center py-4">Cargando...</p> : error ? <p className="text-red-500 text-center py-4">{error}</p> :
-                <>
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Inicio</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modalidad</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Publicado</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {talleresMostrados.map(taller => (
-                                <tr key={taller.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{taller.nombre}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(taller.fecha_inicio).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{taller.modalidad}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${taller.publicado ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{taller.publicado ? 'Sí' : 'No'}</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center gap-4">
-                                        {/* 2. Se añade el Link que lleva a la página de asistencia del taller */}
-                                        <Link to={`/taller/${taller.id}/asistencia`} className="text-green-600 hover:text-green-900" title="Ver Inscritos y Asistencia">
-                                            <ClipboardCheck size={20} />
-                                        </Link>
-                                        <button onClick={() => handleOpenModal(taller)} className="text-blue-600 hover:text-blue-900" title="Editar Taller">
-                                            <Pencil size={20} />
-                                        </button>
-                                        {user.rol === 'administrador' && (
-                                            <button onClick={() => handleDelete(taller.id)} className="text-red-600 hover:text-red-900" title="Eliminar Taller">
-                                                <Trash2 size={20} />
-                                            </button>
-                                        )}
-                                    </td>
+                    <>
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha Inicio</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modalidad</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Publicado</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    {talleresMostrados.length === 0 && !loading && (
-                        <p className="text-center text-gray-500 py-4">
-                            {user.rol === 'facilitador' ? 'Aún no tienes talleres asignados.' : 'No hay talleres para mostrar.'}
-                        </p>
-                    )}
-                </>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {talleresMostrados.map(taller => (
+                                    <tr key={taller.id}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{taller.nombre}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(taller.fecha_inicio).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{taller.modalidad}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${taller.publicado ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{taller.publicado ? 'Sí' : 'No'}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex items-center gap-4">
+
+                                            <Link to={`/taller/${taller.id}/asistencia`} className="text-indigo-600 hover:text-indigo-900" title="Ver Inscritos y Asistencia">
+                                                <ClipboardCheck size={20} />
+                                            </Link>
+
+                                            {/* 4. Nuevo botón para notificar, solo si el taller está publicado */}
+                                            {taller.publicado && user.rol === 'administrador' && (
+                                                <button
+                                                    onClick={() => handleNotificar(taller.id)}
+                                                    disabled={notifyingTallerId === taller.id}
+                                                    className="p-1.5 flex items-center justify-center bg-green-500 text-white rounded-full hover:bg-green-600 disabled:bg-gray-400"
+                                                    title="Notificar a Interesados"
+                                                >
+                                                    {notifyingTallerId === taller.id
+                                                        ? <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                                                        : <Mail size={20} />
+                                                    }
+                                                </button>
+                                            )}
+
+                                            <button onClick={() => handleOpenModal(taller)} className="text-blue-600 hover:text-blue-900" title="Editar Taller">
+                                                <Pencil size={20} />
+                                            </button>
+
+                                            {user.rol === 'administrador' && (
+                                                <button onClick={() => handleDelete(taller.id)} className="text-red-600 hover:text-red-900" title="Eliminar Taller">
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {talleresMostrados.length === 0 && !loading && (
+                            <p className="text-center text-gray-500 py-4">
+                                {user.rol === 'facilitador' ? 'Aún no tienes talleres asignados.' : 'No hay talleres para mostrar.'}
+                            </p>
+                        )}
+                    </>
                 }
             </div>
 
@@ -201,7 +246,7 @@ const GestionTalleres = () => {
                             <input name="nombre" value={currentTaller.nombre} onChange={handleChange} placeholder="Nombre del Taller" className="w-full p-2 border rounded" required />
                             <textarea name="descripcion" value={currentTaller.descripcion} onChange={handleChange} placeholder="Descripción" className="w-full p-2 border rounded" rows="3"></textarea>
                             <textarea name="objetivos" value={currentTaller.objetivos} onChange={handleChange} placeholder="Objetivos" className="w-full p-2 border rounded" rows="3"></textarea>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div><label>Fecha de Inicio</label><input type="datetime-local" name="fecha_inicio" value={currentTaller.fecha_inicio} onChange={handleChange} className="w-full p-2 border rounded" required /></div>
                                 <div><label>Fecha de Fin</label><input type="datetime-local" name="fecha_fin" value={currentTaller.fecha_fin} onChange={handleChange} className="w-full p-2 border rounded" /></div>

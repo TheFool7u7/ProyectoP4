@@ -41,6 +41,11 @@ const Login = () => {
                     <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg disabled:bg-gray-400 font-bold transition-transform transform hover:scale-105">
                         {loading ? "Cargando..." : "Entrar"}
                     </button>
+                    <div className="text-center mt-4">
+                        <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                            ¿Olvidaste tu contraseña?
+                        </Link>
+                    </div>
                 </form>
                 <p className="text-center mt-6 text-sm text-gray-600">
                     ¿No tienes una cuenta?{' '}
