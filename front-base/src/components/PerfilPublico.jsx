@@ -19,7 +19,7 @@ const PerfilPublico = () => {
                 fetch(`${API_URL}/api/documentos/${graduadoId}`),
                 fetch(`${API_URL}/api/graduados/${graduadoId}/carreras`),
             ]);
-            
+
             if (!graduadoRes.ok) throw new Error("No se pudo cargar el perfil del graduado.");
 
             setGraduado(await graduadoRes.json());
@@ -40,9 +40,9 @@ const PerfilPublico = () => {
     const handleDocumentView = async (filePath) => {
         try {
             if (!filePath) throw new Error("La ruta del archivo no está disponible.");
-            
+
             const { data, error } = await supabase.storage
-                .from('documentos-graduados') 
+                .from('documentos-graduados')
                 .createSignedUrl(filePath, 60); // 60 segundos de validez
 
             if (error) throw error;
@@ -57,8 +57,8 @@ const PerfilPublico = () => {
 
     return (
         <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-            <Link to="/graduados" className="flex items-center gap-2 text-blue-600 hover:underline mb-6">
-                <ArrowLeft size={18} /> Volver a la lista de graduados
+            <Link to="/buscar-graduados" className="flex items-center gap-2 text-blue-600 hover:underline mb-6">
+                <ArrowLeft size={18} /> Volver a la búsqueda de graduados
             </Link>
             <div className="bg-white shadow-lg rounded-lg overflow-hidden">
                 <div className="p-6">
@@ -77,13 +77,13 @@ const PerfilPublico = () => {
                         <div className="space-y-4">
                             <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">Historial Académico</h2>
                             <div className="bg-gray-50 p-4 rounded-lg">
-                                <h3 className="font-semibold mb-2 flex items-center"><GraduationCap className="mr-2"/> Carreras</h3>
+                                <h3 className="font-semibold mb-2 flex items-center"><GraduationCap className="mr-2" /> Carreras</h3>
                                 {carreras.length > 0 ? (
                                     <ul className="list-disc list-inside space-y-1">{carreras.map(c => <li key={c.id}>{c.nombre_carrera} ({c.ano_finalizacion})</li>)}</ul>
                                 ) : <p className="text-sm text-gray-500">No hay carreras registradas.</p>}
                             </div>
-                             <div className="bg-gray-50 p-4 rounded-lg">
-                                <h3 className="font-semibold mb-2 flex items-center"><FileText className="mr-2"/> Documentos</h3>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="font-semibold mb-2 flex items-center"><FileText className="mr-2" /> Documentos</h3>
                                 {documentos.length > 0 ? (
                                     <ul className="space-y-2">{documentos.map(doc => (
                                         <li key={doc.id} className="flex items-center justify-between">
