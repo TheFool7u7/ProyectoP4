@@ -144,4 +144,42 @@ router.get('/:id/inscritos', async (req, res) => {
     res.status(200).json(data);
 });
 
+router.get('/buscar', async (req, res) => {
+    const { nombre, areas } = req.query;
+
+    try {
+        let query = supabase
+            .from('talleres')
+            .select(`*, facilitador: perfiles (nombre_completo)`)
+            .eq('publicado', true)
+            .eq('cancelado', false);
+
+        if (nombre) {
+            query = query.ilike('nombre', `%${nombre}%`);
+        }
+
+        if (areas) {
+            const areasIds = areas.split(',');
+
+            const { data: tallerIds, error: rpcError } = await supabase.rpc('get_talleres_by_areas', { p_area_ids: areasIds });
+
+            if (rpcError) throw rpcError;
+
+            const ids = tallerIds.map(t => t.taller_id);
+            if (ids.length === 0) {
+                return res.status(200).json([]);
+            }
+            query = query.in('id', ids);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        res.status(200).json(data);
+
+    } catch (error) {
+        console.error("Error en la búsqueda de talleres:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

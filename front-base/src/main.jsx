@@ -27,6 +27,7 @@ import ResultadosEncuesta from './components/ResultadosEncuesta';
 import DiseñadorEncuesta from './components/DiseñadorEncuesta';
 import PreviewEncuesta from './components/PreviewEncuesta';
 import Reportes from './components/Reportes';
+import Dashboard from './components/Dashboard';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -41,8 +42,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             path="/"
             element={<PrivateRoute><Layout /></PrivateRoute>}
           >
-            <Route index element={<div className="p-4 text-xl">¡Bienvenido al sistema!</div>} />
-            <Route path="home" element={<div className="p-4">Tablero de inicio</div>} />
+            <Route index element={<Dashboard />} />
+            <Route path="home" element={<Dashboard />} />
             <Route path="catalogo-talleres" element={<CatalogoTalleres />} />
             <Route path="taller/:tallerId" element={<TallerDetalle />} />
             <Route path="mis-preferencias" element={<MisPreferencias />} />
