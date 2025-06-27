@@ -82,7 +82,7 @@ const MiPerfil = () => {
             const filePath = `${user.id}/${Date.now()}_${cleanFileName}`;
 
             const { error: uploadError } = await supabase.storage
-                .from('documentos_graduados') // Nombre del bucket
+                .from('documentos-graduados') // Nombre del bucket
                 .upload(filePath, selectedFile);
 
             if (uploadError) throw uploadError;

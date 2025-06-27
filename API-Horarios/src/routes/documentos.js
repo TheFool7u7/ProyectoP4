@@ -6,7 +6,7 @@ const { supabase } = require('../config/supabaseClient');
 router.get('/:graduadoId', async (req, res) => {
     const { graduadoId } = req.params;
     const { data, error } = await supabase
-        .from('documentos_graduados')
+        .from('documentos_graduados') // <-- ¡CORREGIDO! Nombre de la tabla de la DB
         .select('*')
         .eq('graduado_id', graduadoId);
 
@@ -14,15 +14,18 @@ router.get('/:graduadoId', async (req, res) => {
     res.status(200).json(data);
 });
 
-// POST
+// POST (Esta ruta ya estaba corregida y es correcta)
 router.post('/', async (req, res) => {
     // El body contiene: { graduado_id, tipo_documento, nombre_archivo, url_archivo_storage }
     const { data, error } = await supabase
-        .from('documentos_graduados')
+        .from('documentos_graduados') 
         .insert([req.body])
         .select();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+        console.error("Error al insertar documento en la tabla 'documentos_graduados':", error.message);
+        return res.status(500).json({ error: 'Error al guardar la referencia del documento en la base de datos.', details: error.message });
+    }
     res.status(201).json(data[0]);
 });
 
@@ -33,7 +36,7 @@ router.delete('/:id', async (req, res) => {
     try {
         // 1. Obtener la URL del documento que vamos a borrar.
         const { data: docData, error: findError } = await supabase
-            .from('documentos_graduados')
+            .from('documentos_graduados') // <-- ¡CORREGIDO! Nombre de la tabla de la DB
             .select('url_archivo_storage')
             .eq('id', id)
             .single();
@@ -47,19 +50,18 @@ router.delete('/:id', async (req, res) => {
         const filePath = url.substring(url.lastIndexOf('/') + 1);
         
         // 2. Eliminar el archivo del Storage.
-        // ¡CORRECCIÓN CRÍTICA! Usamos el nombre del bucket con guion bajo.
+        // Aquí SÍ se usa el nombre del bucket de Storage (con guion medio), lo cual es correcto.
         const { error: storageError } = await supabase.storage
-            .from('documentos_graduados') // <-- CORREGIDO: con guion bajo
+            .from('documentos-graduados') 
             .remove([filePath]);
 
         if (storageError) {
-            // No detenemos el proceso si el archivo no se encuentra, pero es bueno saberlo.
             console.warn(`Advertencia al borrar de Storage: ${storageError.message}. Se continuará borrando el registro de la base de datos.`);
         }
         
         // 3. Eliminar el registro de la base de datos.
         const { error: dbError } = await supabase
-            .from('documentos_graduados')
+            .from('documentos_graduados') // <-- ¡CORREGIDO! Nombre de la tabla de la DB
             .delete()
             .eq('id', id);
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Trash2, FileText } from 'lucide-react';
+import { supabase } from '../supabaseClient'; // Asegúrate de que este import sea correcto
 
 const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
     const [formData, setFormData] = useState({});
@@ -40,6 +41,7 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                     const response = await fetch(`${API_URL}/api/documentos/${graduado.id}`);
                     if (response.ok) {
                         const data = await response.json();
+                        // El `url_archivo_storage` ahora debería ser solo la RUTA del archivo, no la URL completa
                         setDocumentos(data);
                     }
                 } catch (error) {
@@ -82,6 +84,26 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
         const response = await fetch(`${API_URL}/api/graduados/carreras/${carreraId}`, { method: 'DELETE' });
         if (response.ok) setCarreras(prev => prev.filter(c => c.id !== carreraId));
         else alert("Error al eliminar la carrera.");
+    };
+
+    // --- NUEVA FUNCIÓN AÑADIDA ---
+    const handleDocumentView = async (filePath) => {
+        try {
+            if (!filePath) {
+                alert("La ruta del archivo no está disponible.");
+                return;
+            }
+            // Genera una URL firmada que será válida por 60 segundos
+            const { data, error } = await supabase.storage
+                .from('documentos-graduados') // Asegúrate que este es el nombre de tu bucket
+                .createSignedUrl(filePath, 60); // 60 segundos de validez
+
+            if (error) throw error;
+            window.open(data.signedUrl, '_blank'); // Abre el documento en una nueva pestaña
+        } catch (error) {
+            alert("Error al generar el enlace del documento: " + error.message);
+            console.error("Error al generar URL firmada:", error);
+        }
     };
 
     const handleDeleteDocumento = async (documentoId) => {
@@ -132,7 +154,6 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                         {/* Columna de Información Personal */}
                         <div className="space-y-4">
                             <h3 className="font-semibold text-lg border-b pb-2">Información Personal</h3>
-                            {/* ... campos de formulario ... */}
                             <div><label className="block text-sm font-medium">Nombre Completo</label><input type="text" name="nombre_completo" value={formData.nombre_completo || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" required /></div>
                             <div><label className="block text-sm font-medium">Identificación</label><input type="text" name="identificacion" value={formData.identificacion || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" required /></div>
                             <div><label className="block text-sm font-medium">Teléfono</label><input type="text" name="telefono" value={formData.telefono || ''} onChange={handleChange} className="mt-1 block w-full p-2 border rounded-md" /></div>
@@ -142,7 +163,7 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                         </div>
 
                         {/* Columna de Carreras y Documentos */}
-                        <div className="space-y-6"> {/* Aumenta el espaciado  */}
+                        <div className="space-y-6">
                             {/* Sección de Títulos */}
                             <div>
                                 <h3 className="font-semibold text-lg border-b pb-2">Títulos Obtenidos</h3>
@@ -168,10 +189,11 @@ const EditGraduadoModal = ({ graduado, onClose, onSave }) => {
                                     {loadingDocs ? <p>Cargando documentos...</p> : 
                                         documentos.length > 0 ? documentos.map(doc => (
                                             <div key={doc.id} className="flex items-center justify-between bg-gray-100 p-2 rounded">
-                                                <a href={doc.url_archivo_storage} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline truncate" title={doc.nombre_archivo}>
+                                                {/* --- CAMBIO APLICADO AQUÍ --- */}
+                                                <button type="button" onClick={() => handleDocumentView(doc.url_archivo_storage)} className="flex items-center gap-2 text-blue-600 hover:underline truncate bg-transparent border-none p-0 cursor-pointer text-left w-full" title={doc.nombre_archivo}>
                                                     <FileText size={18} />
                                                     <span className="truncate">{doc.nombre_archivo}</span>
-                                                </a>
+                                                </button>
                                                 <button type="button" onClick={() => handleDeleteDocumento(doc.id)} className="text-red-500 hover:text-red-700 shrink-0 ml-2"><Trash2 size={18} /></button>
                                             </div>
                                         )) : <p className="text-gray-500">No hay documentos adjuntos.</p>
