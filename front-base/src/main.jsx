@@ -28,6 +28,8 @@ import DiseñadorEncuesta from './components/DiseñadorEncuesta';
 import PreviewEncuesta from './components/PreviewEncuesta';
 import Reportes from './components/Reportes';
 import Dashboard from './components/Dashboard';
+import BuscadorGraduados from './components/BuscadorGraduados';
+import PerfilPublico from './components/PerfilPublico';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -61,6 +63,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Route path="encuesta/builder/:encuestaId" element={<DiseñadorEncuesta />} />
             <Route path="encuesta/preview/:encuestaId" element={<PreviewEncuesta />} />
             <Route path="reportes" element={<AdminRoute><Reportes /></AdminRoute>} />
+            <Route path="buscar-graduados" element={<BuscadorGraduados />} />
+            <Route path="perfil-publico/:graduadoId" element={<PerfilPublico />} />
           </Route>
         </Routes>
       </AuthProvider>

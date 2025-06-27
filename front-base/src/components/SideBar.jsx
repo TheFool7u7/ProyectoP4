@@ -2,7 +2,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from "./context/AuthContext";
 import {
     LayoutGrid, BookOpen, Users, GraduationCap, LogOut, Menu, UserPlus,
-    Lightbulb, Star, ClipboardList, UserCircle, BookCheck, BarChart2
+    Lightbulb, Star, ClipboardList, UserCircle, BookCheck, BarChart2, Search,
 } from "lucide-react";
 
 const Sidebar = ({ isMinimized, toggleSidebar }) => {
@@ -17,6 +17,7 @@ const Sidebar = ({ isMinimized, toggleSidebar }) => {
     const graduateLinks = [
         { name: "Inicio", path: "/home", icon: LayoutGrid },
         { name: "Mi Perfil", path: "/mi-perfil", icon: UserCircle },
+        { name: "Buscar Graduados", path: "/buscar-graduados", icon: Search },
         { name: "Catálogo de Talleres", path: "/catalogo-talleres", icon: ClipboardList },
         { name: "Mis Talleres", path: "/mis-talleres", icon: BookCheck },
         { name: "Mis Preferencias", path: "/mis-preferencias", icon: Star },

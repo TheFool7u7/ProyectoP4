@@ -34,6 +34,35 @@ router.get('/', async (req, res) => {
     res.status(200).json(aplanada);
 });
 
+router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const { data, error } = await supabase
+            .from('graduados')
+            .select('*') // Seleccionamos todos los campos del graduado
+            .eq('id', id)
+            .single(); // .single() para que devuelva un solo objeto, no un array
+
+        if (error) {
+            // Este error puede ocurrir si el UUID no es válido o hay otro problema
+            throw error;
+        }
+
+        if (!data) {
+            // Esto ocurre si el UUID es válido pero no se encontró ningún graduado con ese ID
+            return res.status(404).json({ error: 'Graduado no encontrado' });
+        }
+        
+        res.status(200).json(data);
+
+    } catch (error) {
+        console.error("Error al obtener un solo graduado:", error);
+        // Usamos el mensaje de Supabase si está disponible, si no, uno genérico.
+        res.status(500).json({ error: error.message || 'Error al procesar la solicitud.' });
+    }
+});
+
 // --- PUT /:id ---
 // Actualiza los datos de un graduado
 router.put('/:id', async (req, res) => {
@@ -177,5 +206,36 @@ router.delete('/carreras/:carreraId', async (req, res) => {
     res.status(200).json({ message: 'Carrera eliminada exitosamente' });
 });
 
+
+router.get('/buscar', async (req, res) => {
+    const { q } = req.query; 
+
+    if (!q) {
+        return res.status(400).json({ error: 'Se requiere un término de búsqueda.' });
+    }
+
+    try {
+        const { data, error } = await supabase.rpc('buscar_graduados', {
+            termino_busqueda: q
+        });
+
+        if (error) throw error;
+
+        const graduadoIds = data.map(g => g.id);
+        
+        const { data: graduadosConRol, error: rolError } = await supabase
+            .from('graduados')
+            .select('*, perfiles(rol)')
+            .in('id', graduadoIds);
+
+        if (rolError) throw rolError;
+        
+        res.status(200).json(graduadosConRol);
+
+    } catch (error) {
+        console.error("Error en la búsqueda de graduados:", error);
+        res.status(500).json({ error: 'Error al procesar la búsqueda.' });
+    }
+});
 
 module.exports = router;
